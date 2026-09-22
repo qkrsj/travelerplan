@@ -369,6 +369,7 @@ details code { background: var(--field); padding: 1px 5px; border-radius: 4px; f
     <textarea id="planText" spellcheck="false" aria-label="여행 계획 입력"></textarea>
     <div class="btnrow">
       <button id="applyBtn" class="btn primary" type="button">적용하고 재생</button>
+      <button id="shareBtn" class="btn" type="button" title="지금 계획을 링크로 만들어 복사해요">🔗 공유 링크 만들기</button>
       <button id="resetBtn" class="btn" type="button">예시로 되돌리기</button>
     </div>
     <div id="msgs" aria-live="polite"></div>
@@ -409,6 +410,7 @@ details code { background: var(--field); padding: 1px 5px; border-radius: 4px; f
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 <script>
 const DEFAULT_PLAN = "# 형식\n#   1일차 메모\n#   시간 장소 / 메모                       → 장소 이벤트\n#   시작~도착 출발 > 도착 : 교통수단 / 메모   → 이동 이벤트\n# 사전에 없는 장소는 자동 검색해요. 안 되면 이름@주소 로 적어 주세요.\n# 시간은 예시예요. 파리·스페인 구간도 예시예요. 원하는 대로 고쳐 보세요.\n\n1일차 1/14~15 출국, 맨체스터 도착\n10:00 인천공항 / 체크인\n12:00~18:30 인천공항 > 아부다비공항 : 비행기 / 경유\n20:00~23:30 아부다비공항 > 맨체스터공항 : 비행기\n09:00~09:25 맨체스터공항 > 맨체스터 피카딜리역 : 기차\n09:40 피카딜리역 / 큰 짐 맡기기\n10:15~10:45 피카딜리역 > 올드 트래포드 : 트램\n11:00 올드 트래포드 / 스타디움 투어\n14:00~14:30 올드 트래포드 > 피카딜리역 : 트램\n15:30~16:40 피카딜리역 > 리버풀 라임스트리트역 : 기차\n\n2일차 1/16 리버풀, 안필드 경기\n10:00~10:20 라임스트리트역 > 알버트 독 : 도보\n10:30 알버트 독 / 비틀즈 스토리\n14:00~14:30 알버트 독 > 안필드 : 버스\n15:00 안필드 / 리버풀 vs 크리스탈 팰리스\n20:00~20:30 안필드 > 라임스트리트역 : 버스\n\n3일차 1/17 안필드 투어, 런던 이동\n10:00~10:30 라임스트리트역 > 안필드 : 버스\n11:00 안필드 / 스타디움 투어\n14:00~14:30 안필드 > 라임스트리트역 : 버스\n15:30~17:30 라임스트리트역 > 런던 유스턴역 : 기차\n\n4일차 런던 웨스트민스터\n10:00~10:30 유스턴역 > 빅벤 : 지하철\n11:00~11:20 빅벤 > 버킹엄 궁전 : 도보\n13:30~14:00 버킹엄 궁전 > 코벤트 가든 : 버스\n14:30 코벤트 가든 / 시장 구경\n\n5일차 대영박물관, 캠던\n10:00~10:20 코벤트 가든 > 대영박물관 : 도보\n10:30 대영박물관\n15:00~15:20 대영박물관 > 캠던 : 지하철\n15:40 캠던 / 캠던 마켓\n\n6일차 해리포터 스튜디오\n09:00~09:15 캠던 > 유스턴역 : 지하철\n09:30~10:10 유스턴역 > 왓포드 정션 : 기차\n10:30~10:50 왓포드 정션 > 해리포터 스튜디오 : 버스\n11:00 해리포터 스튜디오 / 투어\n15:30~15:50 해리포터 스튜디오 > 왓포드 정션 : 버스\n16:00~16:40 왓포드 정션 > 유스턴역 : 기차\n\n7일차 타워와 버러 마켓\n10:00~10:30 유스턴역 > 타워 오브 런던 : 지하철\n10:40 타워 오브 런던\n13:00~13:10 타워 오브 런던 > 타워 브리지 : 도보\n13:30~13:50 타워 브리지 > 버러 마켓 : 도보\n14:00 버러 마켓 / 점심\n\n8일차 포토벨로, 파리로\n10:00~10:30 버러 마켓 > 포토벨로 마켓 : 지하철\n10:40 포토벨로 마켓\n14:00~14:20 포토벨로 마켓 > 세인트 판크라스 : 지하철\n15:00~18:30 세인트 판크라스 > 파리 북역 : 기차 / 유로스타\n\n9일차 파리\n10:00~10:20 파리 북역 > 루브르 : 지하철\n10:30 루브르 / 루브르 박물관\n15:00~15:20 루브르 > 에펠탑 : 지하철\n16:00 에펠탑\n\n10일차 파리\n10:00~10:20 에펠탑 > 개선문 : 지하철\n10:30 개선문\n13:00~13:20 개선문 > 몽마르트 : 지하철\n13:40 몽마르트\n\n11일차 바르셀로나로\n09:00~09:40 몽마르트 > 샤를드골공항 : 지하철\n12:00~14:00 샤를드골공항 > 바르셀로나 공항 : 비행기\n15:00~15:40 바르셀로나 공항 > 사그라다 파밀리아 : 버스\n16:00 사그라다 파밀리아\n\n12일차 바르셀로나\n10:00~10:20 사그라다 파밀리아 > 구엘 공원 : 지하철\n10:40 구엘 공원\n14:00~14:20 구엘 공원 > 람블라스 : 지하철\n14:40 람블라스\n\n13일차 마드리드로\n09:00~09:15 람블라스 > 바르셀로나 산츠역 : 지하철\n10:00~12:40 바르셀로나 산츠역 > 마드리드 아토차역 : 기차\n14:00~14:15 아토차역 > 프라도 미술관 : 도보\n14:30 프라도 미술관\n\n14일차 마드리드\n10:00~10:20 프라도 미술관 > 왕궁 : 지하철\n10:30 왕궁\n13:00~13:15 왕궁 > 마요르 광장 : 도보\n13:30 마요르 광장\n\n15일차 귀국\n09:00~09:40 마요르 광장 > 마드리드 공항 : 지하철\n12:00~20:00 마드리드 공항 > 아부다비공항 : 비행기\n22:00~09:00 아부다비공항 > 인천공항 : 비행기\n";
 const TripLogic = (function () {
@@ -1706,9 +1708,11 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       box.appendChild(b);
     });
   }
+  let shareLoadedNote = false; // 공유 링크로 불러온 직후엔, 장소 온라인 검색으로 재렌더링돼도 안내가 계속 보이게
   function showMsgs(plan) {
     const box = $('#msgs'); box.textContent = '';
     const add = (cls, t) => { const p = document.createElement('p'); p.className = cls; p.textContent = t; box.appendChild(p); };
+    if (shareLoadedNote) add('ok', '🔗 공유된 계획을 불러왔어요.');
     plan.errors.forEach((m) => add('err', m));
     plan.warnings.forEach((m) => add('warn', m));
     if (!plan.errors.length && !plan.warnings.length) add('ok', `${plan.events.length}개 이벤트를 읽었어요.`);
@@ -1922,12 +1926,42 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   $('#fullSheet').addEventListener('click', () => setFull(!$('#sheet').classList.contains('full')));
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#sheet').classList.contains('full')) setFull(false); });
   $('#applyBtn').addEventListener('click', () => {
+    shareLoadedNote = false;
     const ok = applyPlan($('#planText').value);
     if (ok && !state.plan.errors.length && !state.plan.warnings.length && window.innerWidth < 820) closeSheet();
   });
   $('#resetBtn').addEventListener('click', () => {
     $('#planText').value = DEFAULT_PLAN;
     applyPlan(DEFAULT_PLAN);
+  });
+
+  // ---------- 계획 링크로 공유 ----------
+  function flashMsg(cls, t) {
+    const box = $('#msgs'); box.textContent = '';
+    const p = document.createElement('p'); p.className = cls; p.textContent = t; box.appendChild(p);
+  }
+  async function copyText(t) {
+    try { await navigator.clipboard.writeText(t); return true; } catch (e) { /* 폴백으로 진행 */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) return true;
+    } catch (e) { /* 폴백으로 진행 */ }
+    return false;
+  }
+  $('#shareBtn').addEventListener('click', async () => {
+    const text = $('#planText').value;
+    if (!text.trim()) { flashMsg('warn', '공유할 계획이 없어요. 먼저 계획을 적어 주세요.'); return; }
+    if (!window.LZString) { flashMsg('err', '공유 기능을 불러오지 못했어요(인터넷 연결을 확인해 주세요).'); return; }
+    const packed = LZString.compressToEncodedURIComponent(text);
+    const url = `${location.origin}${location.pathname}?plan=${packed}`;
+    if (url.length > 8000) { flashMsg('warn', '계획이 너무 길어서 링크로 만들기 어려워요. 계획을 좀 줄여 주세요.'); return; }
+    const ok = await copyText(url);
+    if (ok) flashMsg('ok', '공유 링크를 복사했어요! 원하는 곳에 붙여넣기(Ctrl+V) 해서 보내세요.');
+    else window.prompt('아래 링크를 복사해서 보내세요:', url);
   });
 
   // ---------- 장소 검색 (계획에 있는 장소를 검색해서 그 방문 시점으로 이동) ----------
@@ -2119,10 +2153,21 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   updateTitle(); renderHats(); updateAutoBtn();
   closeSheet();
   resize();
+  function sharedPlanFromUrl() {
+    try {
+      const packed = new URLSearchParams(location.search).get('plan');
+      if (!packed || !window.LZString) return null;
+      const text = LZString.decompressFromEncodedURIComponent(packed);
+      return text && text.trim() ? text : null;
+    } catch (e) { return null; }
+  }
+  const sharedText = sharedPlanFromUrl();
   const savedPlan = store.get('tripmap:plan2');
-  const startText = savedPlan && savedPlan.trim() ? savedPlan : DEFAULT_PLAN;
+  const startText = sharedText || (savedPlan && savedPlan.trim() ? savedPlan : DEFAULT_PLAN);
   $('#planText').value = startText;
+  if (sharedText) { shareLoadedNote = true; history.replaceState(null, '', location.pathname); }
   if (!applyPlan(startText)) { $('#planText').value = DEFAULT_PLAN; applyPlan(DEFAULT_PLAN); }
+  if (sharedText) openSheet();
   requestAnimationFrame(frame);
   window.__trip = { ctl, cam, map, roadStat, go, applyPlan, dims: () => ({ W, H, DPR }), events: () => events };
 })();
