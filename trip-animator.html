@@ -1979,7 +1979,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   }
 
   // ---------- 이동 중 캐릭터를 화면 중앙에 두는 카메라 ----------
-  const FOLLOW_MIN_Z = { plane: 6, train: 10, ship: 10, subway: 13, tram: 13, bus: 13, taxi: 13, walk: 15 };
+  const FOLLOW_MIN_Z = { plane: 6, train: 9.5, ship: 9.5, subway: 12.5, tram: 12.5, bus: 12.5, taxi: 12.5, walk: 14.5 };
   const follow = { leg: null, z: 0, t: 0 };
   function followVehicle(v, t) {
     const it = ctl.anim.items[ctl.anim.i];
@@ -1988,7 +1988,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       map.stop();
       // 경로 전체가 들어오는 줌보다 조금만 멀리서 따라감 (긴 구간도 너무 멀어지지 않게 하한을 둠)
       const fit = map.getBoundsZoom(LF.latLngBounds(legTarget(it.leg).b), false, LF.point(32, hud.top + hud.bottom + 20));
-      const cap = it.leg.mode === 'plane' ? 16.5 : 17.5;
+      const cap = it.leg.mode === 'plane' ? 16.5 : 17;
       follow.goal = Math.max(FOLLOW_MIN_Z[it.leg.mode] || 10, Math.min(cap, fit - 0.4));
     }
     camKey = null;
