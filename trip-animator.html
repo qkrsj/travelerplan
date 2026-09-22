@@ -1,0 +1,2045 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>여행 동선 애니메이션</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600&family=Jua&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sea: #c2dff0;
+  --land: #e4efdc;
+  --land-edge: #a4bdaa;
+  --border: #9ab4a8;
+  --grid: rgba(20, 60, 90, .10);
+  --ink: #10283a;
+  --ink-2: #47617a;
+  --panel: rgba(255, 255, 255, .9);
+  --panel-solid: #ffffff;
+  --line: rgba(16, 40, 58, .18);
+  --field: rgba(60, 100, 140, .09);
+  --accent: #e11d48;
+  --on-accent: #ffffff;
+  --focus: #1d5fd1;
+  --err: #c0271b;
+  --warn: #8a5a00;
+  --ok: #17703f;
+  --c-plane: #0b7dc4;
+  --c-train: #c77700;
+  --c-subway: #7b4fd6;
+  --c-tram: #0f9d8f;
+  --c-bus: #1f9e4b;
+  --c-walk: #5b6b78;
+  --c-taxi: #d9a400;
+  --c-ship: #2d6fd6;
+  --display: 'Jua', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sea: #0a2138;
+    --land: #1b4560;
+    --land-edge: #2f6f8f;
+    --border: rgba(140, 200, 225, .38);
+    --grid: rgba(160, 210, 240, .08);
+    --ink: #e8f3fb;
+    --ink-2: #9db8cb;
+    --panel: rgba(8, 28, 48, .88);
+    --panel-solid: #0c2a45;
+    --line: rgba(180, 215, 240, .2);
+    --field: rgba(160, 200, 235, .1);
+    --accent: #ffd23f;
+    --on-accent: #10283a;
+    --focus: #7fb2ff;
+    --err: #ff9a8f;
+    --warn: #ffd27a;
+    --ok: #7be0a5;
+    --c-plane: #5ccbff;
+    --c-train: #ffb84d;
+    --c-subway: #b99cff;
+    --c-tram: #3fe0cf;
+    --c-bus: #63e08f;
+    --c-walk: #dbe6ee;
+    --c-taxi: #ffe45c;
+    --c-ship: #7db4ff;
+  }
+}
+:root[data-theme="dark"] {
+  --sea: #0a2138;
+  --land: #1b4560;
+  --land-edge: #2f6f8f;
+  --border: rgba(140, 200, 225, .38);
+  --grid: rgba(160, 210, 240, .08);
+  --ink: #e8f3fb;
+  --ink-2: #9db8cb;
+  --panel: rgba(8, 28, 48, .88);
+  --panel-solid: #0c2a45;
+  --line: rgba(180, 215, 240, .2);
+  --field: rgba(160, 200, 235, .1);
+  --accent: #ffd23f;
+  --on-accent: #10283a;
+  --focus: #7fb2ff;
+  --err: #ff9a8f;
+  --warn: #ffd27a;
+  --ok: #7be0a5;
+  --c-plane: #5ccbff;
+  --c-train: #ffb84d;
+  --c-subway: #b99cff;
+  --c-tram: #3fe0cf;
+  --c-bus: #63e08f;
+  --c-walk: #dbe6ee;
+  --c-taxi: #ffe45c;
+  --c-ship: #7db4ff;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  height: 100%; margin: 0; overflow: hidden;
+  background: var(--sea); color: var(--ink);
+  font-family: var(--body); font-size: 14px; line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--focus); outline-offset: 2px;
+}
+#app { position: relative; width: 100%; height: 100%; overflow: hidden; overflow: clip; }
+#map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; background: var(--sea); font-family: var(--body); }
+#overlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; display: block; }
+.leaflet-top { top: var(--hudt, 0px); }
+.leaflet-bottom { bottom: var(--hudb, 0px); }
+.leaflet-control-attribution { font-size: 11px; }
+
+/* 상단 */
+#hudTop {
+  position: absolute; left: 0; right: 0; top: 0; z-index: 2;
+  padding: 10px 12px 0; display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#title {
+  margin: 0; font-family: var(--display); font-weight: 400; font-size: 19px; line-height: 1.2;
+  background: var(--panel); border: 1px solid var(--line);
+  padding: 6px 14px; border-radius: 999px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.pill-btn {
+  pointer-events: auto; cursor: pointer; flex: none;
+  background: var(--accent); color: var(--on-accent); border: 0;
+  padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 13px;
+}
+.capline { display: flex; align-items: center; gap: 8px; }
+#caption {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 7px 12px; font-weight: 600; font-size: 13.5px; min-width: 0; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+#legCount {
+  flex: none; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 7px 10px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+
+/* 하단 */
+#hudBottom {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+#days {
+  display: flex; gap: 6px; overflow-x: auto; pointer-events: auto; padding: 2px 0;
+  scrollbar-width: none;
+}
+#days::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; cursor: pointer; border: 1px solid var(--line); background: var(--panel);
+  border-radius: 8px; padding: 4px 10px; font-size: 12.5px; font-weight: 600; color: var(--ink);
+}
+.chip[aria-current="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+#controls {
+  pointer-events: auto; display: flex; align-items: center; gap: 6px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 8px 10px;
+}
+.ibtn {
+  flex: none; width: 40px; height: 40px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; font-size: 16px; line-height: 1;
+  display: grid; place-items: center;
+}
+.auto {
+  flex: none; cursor: pointer; height: 40px; padding: 0 12px; border-radius: 12px;
+  border: 1px solid var(--line); background: transparent; font-weight: 600; font-size: 13px;
+}
+.auto[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+#events {
+  flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; padding: 2px;
+  scroll-snap-type: x proximity; scrollbar-width: none;
+}
+#events::-webkit-scrollbar { display: none; }
+.ev {
+  flex: none; scroll-snap-align: center; min-width: 112px; max-width: 176px; text-align: left; cursor: pointer;
+  border: 1px solid var(--line); background: var(--field); border-radius: 12px; padding: 6px 10px;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.ev .t { font-size: 11.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ev .n { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev .d { font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev[aria-current="true"] .d { color: inherit; }
+.ev.done { opacity: .62; }
+/* 장소 박스 사이의 이동 표시 */
+.lk {
+  flex: none; align-self: center; cursor: pointer; border: 0; background: transparent; color: var(--ink-2);
+  display: flex; flex-direction: column; align-items: center; gap: 0; padding: 2px 2px; font-size: 11.5px; line-height: 1.35;
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.lk .m { font-weight: 600; }
+.lk.done { opacity: .62; }
+.lk[aria-current="true"] { color: var(--accent); opacity: 1; }
+.lk[aria-current="true"] .m { text-decoration: underline; text-underline-offset: 3px; }
+.ev[aria-current="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; opacity: 1; }
+.ev[aria-current="true"] .t { color: inherit; }
+.ibtn { width: 36px; height: 44px; border-radius: 10px; font-size: 13px; }
+
+/* 일차 카드 */
+#dayCard {
+  position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 138px); z-index: 3; text-align: center; pointer-events: none;
+  transform: translate(-50%, 12px) scale(.94); opacity: 0;
+  transition: opacity .35s ease, transform .35s ease;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 22px;
+  padding: 12px 26px 14px; width: max-content; max-width: 88%;
+}
+#dayCard.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+#dcTitle { font-family: var(--display); font-size: 36px; line-height: 1.1; color: var(--accent); margin: 0; white-space: nowrap; }
+#dcSub { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
+#dcSub:empty { display: none; }
+
+/* 시트 */
+#sheet {
+  position: absolute; z-index: 6; background: var(--panel-solid); color: var(--ink);
+  border: 1px solid var(--line); overflow-y: auto; overscroll-behavior: contain;
+  visibility: hidden; transition: transform .28s ease, visibility 0s linear .28s;
+  padding: 14px 16px 18px;
+}
+#sheet.open { visibility: visible; transform: none; transition-delay: 0s; }
+@media (max-width: 819px) {
+  #sheet { left: 0; right: 0; bottom: 0; max-height: 84%; border-radius: 20px 20px 0 0; transform: translateY(100%); }
+}
+@media (min-width: 820px) {
+  #sheet { top: 0; right: 0; bottom: 0; width: 400px; transform: translateX(100%); border-width: 0 0 0 1px; }
+  #title { font-size: 22px; }
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.sheet-head h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 22px; }
+#closeSheet, #fullSheet { width: 36px; height: 36px; font-size: 18px; }
+.sheet-btns { display: flex; gap: 6px; }
+/* 전체화면 */
+#sheet.full { top: 0; left: 0; right: 0; bottom: 0; width: auto; max-height: none; border-radius: 0; border-width: 0; }
+#sheet.full #planText { min-height: calc(100vh - 320px); min-height: calc(100dvh - 320px); font-size: 15px; }
+#sheet.full > * { max-width: 900px; margin-left: auto; margin-right: auto; }
+#sheet.full #planText { display: block; }
+#sheet h3 { margin: 18px 0 6px; font-size: 14px; }
+.qbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; }
+.qb { cursor: pointer; border: 1px solid var(--line); background: transparent; border-radius: 8px; padding: 4px 10px; font-size: 12.5px; font-weight: 600; }
+.qb:hover { background: var(--field); }
+.qsep { flex: 1 0 100%; height: 0; }
+.qhint { font-size: 12px; color: var(--ink-2); }
+#qmodes { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+#qmodes .qb { padding: 3px 7px; font-weight: 400; }
+#planText {
+  width: 100%; min-height: 250px; resize: vertical; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--field); padding: 10px 12px; font-size: 13px; line-height: 1.65; tab-size: 2;
+}
+.btnrow { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.btn { cursor: pointer; border: 1px solid var(--line); background: transparent; border-radius: 10px; padding: 8px 14px; font-weight: 600; }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+#msgs p { margin: 4px 0; font-size: 12.5px; }
+#msgs .err { color: var(--err); }
+#msgs .warn { color: var(--warn); }
+#msgs .ok { color: var(--ok); }
+details { margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+summary { cursor: pointer; font-weight: 600; }
+details p, details li { font-size: 12.5px; color: var(--ink-2); margin: 6px 0; }
+details ul { padding-left: 18px; margin: 4px 0; }
+details code { background: var(--field); padding: 1px 5px; border-radius: 4px; font-size: 12px; color: var(--ink); }
+.field { display: flex; align-items: center; gap: 10px; }
+#charName { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--field); padding: 8px 10px; }
+#hats { display: flex; gap: 8px; margin-top: 8px; }
+.hat { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; padding: 0; }
+.hat[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--panel-solid), 0 0 0 4px var(--accent); }
+#legList h4 { margin: 12px 0 4px; font-size: 13px; color: var(--ink-2); }
+#legList .leg {
+  display: block; width: 100%; text-align: left; cursor: pointer; background: transparent; border: 0;
+  border-bottom: 1px solid var(--line); padding: 7px 2px; font-size: 13px;
+}
+#legList .leg:hover, #legList .leg.now { background: var(--field); }
+#legList .leg.now { font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  #dayCard, #sheet { transition: none; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map" aria-label="여행 동선 지도"></div>
+  <canvas id="overlay" aria-hidden="true"></canvas>
+
+  <div id="hudTop">
+    <div class="row">
+      <h1 id="title">여행자의 여행 지도</h1>
+      <button id="planBtn" class="pill-btn" type="button" aria-expanded="false" aria-controls="sheet">계획·캐릭터</button>
+    </div>
+    <div class="capline">
+      <div id="caption" aria-live="off"></div>
+      <div id="legCount" aria-label="구간 진행"></div>
+    </div>
+  </div>
+
+  <div id="dayCard" aria-live="polite">
+    <p id="dcTitle"></p>
+    <p id="dcSub"></p>
+  </div>
+
+  <div id="hudBottom">
+    <div id="days" role="group" aria-label="일차로 이동"></div>
+    <div id="controls">
+      <button id="prev" class="ibtn" type="button" aria-label="이전 이벤트">◀</button>
+      <div id="events" role="group" aria-label="이벤트 목록"></div>
+      <button id="next" class="ibtn" type="button" aria-label="다음 이벤트">▶</button>
+      <button id="auto" class="auto" type="button" aria-pressed="false">자동</button>
+    </div>
+  </div>
+
+  <aside id="sheet" aria-label="여행 계획과 캐릭터 설정" inert>
+    <div class="sheet-head">
+      <h2>여행 계획</h2>
+      <div class="sheet-btns">
+        <button id="fullSheet" class="ibtn" type="button" aria-label="전체화면" aria-pressed="false" title="전체화면">⛶</button>
+        <button id="closeSheet" class="ibtn" type="button" aria-label="닫기">✕</button>
+      </div>
+    </div>
+    <div class="qbar" role="toolbar" aria-label="빠른 입력">
+      <button type="button" class="qb" data-q="day">＋ 일차</button>
+      <button type="button" class="qb" data-q="place">＋ 장소</button>
+      <button type="button" class="qb" data-q="move">＋ 이동</button>
+      <button type="button" class="qb" data-q="tidy" title="붙여넣은 일정을 앱 양식으로 자동 정리">🪄 양식 정리</button>
+      <span class="qsep" aria-hidden="true"></span>
+      <span class="qhint">이동 줄 교통수단:</span>
+      <span id="qmodes"></span>
+    </div>
+    <textarea id="planText" spellcheck="false" aria-label="여행 계획 입력"></textarea>
+    <div class="btnrow">
+      <button id="applyBtn" class="btn primary" type="button">적용하고 재생</button>
+      <button id="resetBtn" class="btn" type="button">예시로 되돌리기</button>
+    </div>
+    <div id="msgs" aria-live="polite"></div>
+
+    <details>
+      <summary>이렇게 적어요</summary>
+      <ul>
+        <li>날짜 줄: <code>1일차 메모</code></li>
+        <li>장소 이벤트: <code>10:30 올드 트래포드 / 메모</code></li>
+        <li>이동 이벤트: <code>10:15~10:45 피카딜리역 &gt; 올드 트래포드 : 트램</code></li>
+        <li>바로 앞 이벤트 위치에서 출발하려면 출발지를 빼도 돼요: <code>11:00 &gt; 안필드 : 버스</code></li>
+        <li>교통수단: 비행기, 기차, 지하철, 트램, 버스, 도보, 택시, 배</li>
+        <li>사전에 없는 장소는 자동으로 온라인 검색해요(인터넷 필요, 한 번 찾으면 저장돼요). 못 찾거나 엉뚱한 곳이 잡히면 주소를 직접 적어요: <code>내 숙소@Piccadilly Gardens, Manchester</code> (영문 주소가 잘 찾아져요).</li>
+        <li>시간과 교통수단은 빼도 돼요. 교통수단을 빼면 거리로 추정해요.</li>
+        <li>시간은 <code>10:30</code>, <code>10시 30분</code>, <code>오후 3시</code>, <code>3시 반</code>, <code>10:00~11:30</code>처럼 편하게 적어요.</li>
+        <li>교통수단은 <code>: 버스</code> 대신 끝에 붙여도 돼요: <code>피카딜리역 &gt; 안필드 버스</code>, <code>피카딜리역 &gt; 안필드 🚌</code></li>
+        <li>날짜 번호를 세기 귀찮으면 <code>다음날 제목</code>으로 적어요.</li>
+        <li>여러 곳을 한 줄로: <code>A &gt; B &gt; C : 버스</code>. 줄 앞의 <code>-</code>, <code>*</code>는 무시해요.</li>
+        <li>다른 곳(메모장·노션·ChatGPT 등)에서 복사한 일정을 붙여넣으면 <code>Day 1</code>, <code>1월 14일</code>, <code>- 10:00 인천공항 → 서울 (버스, 30분)</code> 같은 형태를 자동으로 양식에 맞춰요. 원본 그대로 넣으려면 <kbd>Ctrl+Shift+V</kbd>, 이미 붙여넣은 글은 <b>🪄 양식 정리</b> 버튼으로 고쳐요.</li>
+        <li>위쪽 <b>＋ 일차 / 장소 / 이동</b> 버튼은 커서 아래에 새 줄을 넣어 줘요(앞 줄의 끝 시간이 자동으로 들어가요). 이모지 버튼은 커서가 있는 이동 줄의 교통수단을 바꿔요.</li>
+        <li><code>#</code>로 시작하는 줄은 메모예요.</li>
+      </ul>
+      <p>이벤트를 누르면 캐릭터가 지금 위치에서 그 이벤트까지 이동해요. 여러 칸 건너뛰면 중간 이동을 빠르게 지나가요. 도보·버스·택시·트램은 실제 도로를 따라가요(경로를 불러오는 동안이나 불러오지 못했을 때는 곡선). 비행기·기차·지하철·배는 두 장소를 잇는 곡선으로 움직여요.</p>
+    </details>
+
+    <h3>캐릭터</h3>
+    <div class="field">
+      <label for="charName">이름</label>
+      <input id="charName" type="text" maxlength="12" autocomplete="off">
+    </div>
+    <div id="hats" role="group" aria-label="모자 색"></div>
+
+    <h3>이벤트 목록</h3>
+    <div id="legList"></div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
+<script>
+const DEFAULT_PLAN = "# 형식\n#   1일차 메모\n#   시간 장소 / 메모                       → 장소 이벤트\n#   시작~도착 출발 > 도착 : 교통수단 / 메모   → 이동 이벤트\n# 사전에 없는 장소는 자동 검색해요. 안 되면 이름@주소 로 적어 주세요.\n# 시간은 예시예요. 파리·스페인 구간도 예시예요. 원하는 대로 고쳐 보세요.\n\n1일차 1/14~15 출국, 맨체스터 도착\n10:00 인천공항 / 체크인\n12:00~18:30 인천공항 > 아부다비공항 : 비행기 / 경유\n20:00~23:30 아부다비공항 > 맨체스터공항 : 비행기\n09:00~09:25 맨체스터공항 > 맨체스터 피카딜리역 : 기차\n09:40 피카딜리역 / 큰 짐 맡기기\n10:15~10:45 피카딜리역 > 올드 트래포드 : 트램\n11:00 올드 트래포드 / 스타디움 투어\n14:00~14:30 올드 트래포드 > 피카딜리역 : 트램\n15:30~16:40 피카딜리역 > 리버풀 라임스트리트역 : 기차\n\n2일차 1/16 리버풀, 안필드 경기\n10:00~10:20 라임스트리트역 > 알버트 독 : 도보\n10:30 알버트 독 / 비틀즈 스토리\n14:00~14:30 알버트 독 > 안필드 : 버스\n15:00 안필드 / 리버풀 vs 크리스탈 팰리스\n20:00~20:30 안필드 > 라임스트리트역 : 버스\n\n3일차 1/17 안필드 투어, 런던 이동\n10:00~10:30 라임스트리트역 > 안필드 : 버스\n11:00 안필드 / 스타디움 투어\n14:00~14:30 안필드 > 라임스트리트역 : 버스\n15:30~17:30 라임스트리트역 > 런던 유스턴역 : 기차\n\n4일차 런던 웨스트민스터\n10:00~10:30 유스턴역 > 빅벤 : 지하철\n11:00~11:20 빅벤 > 버킹엄 궁전 : 도보\n13:30~14:00 버킹엄 궁전 > 코벤트 가든 : 버스\n14:30 코벤트 가든 / 시장 구경\n\n5일차 대영박물관, 캠던\n10:00~10:20 코벤트 가든 > 대영박물관 : 도보\n10:30 대영박물관\n15:00~15:20 대영박물관 > 캠던 : 지하철\n15:40 캠던 / 캠던 마켓\n\n6일차 해리포터 스튜디오\n09:00~09:15 캠던 > 유스턴역 : 지하철\n09:30~10:10 유스턴역 > 왓포드 정션 : 기차\n10:30~10:50 왓포드 정션 > 해리포터 스튜디오 : 버스\n11:00 해리포터 스튜디오 / 투어\n15:30~15:50 해리포터 스튜디오 > 왓포드 정션 : 버스\n16:00~16:40 왓포드 정션 > 유스턴역 : 기차\n\n7일차 타워와 버러 마켓\n10:00~10:30 유스턴역 > 타워 오브 런던 : 지하철\n10:40 타워 오브 런던\n13:00~13:10 타워 오브 런던 > 타워 브리지 : 도보\n13:30~13:50 타워 브리지 > 버러 마켓 : 도보\n14:00 버러 마켓 / 점심\n\n8일차 포토벨로, 파리로\n10:00~10:30 버러 마켓 > 포토벨로 마켓 : 지하철\n10:40 포토벨로 마켓\n14:00~14:20 포토벨로 마켓 > 세인트 판크라스 : 지하철\n15:00~18:30 세인트 판크라스 > 파리 북역 : 기차 / 유로스타\n\n9일차 파리\n10:00~10:20 파리 북역 > 루브르 : 지하철\n10:30 루브르 / 루브르 박물관\n15:00~15:20 루브르 > 에펠탑 : 지하철\n16:00 에펠탑\n\n10일차 파리\n10:00~10:20 에펠탑 > 개선문 : 지하철\n10:30 개선문\n13:00~13:20 개선문 > 몽마르트 : 지하철\n13:40 몽마르트\n\n11일차 바르셀로나로\n09:00~09:40 몽마르트 > 샤를드골공항 : 지하철\n12:00~14:00 샤를드골공항 > 바르셀로나 공항 : 비행기\n15:00~15:40 바르셀로나 공항 > 사그라다 파밀리아 : 버스\n16:00 사그라다 파밀리아\n\n12일차 바르셀로나\n10:00~10:20 사그라다 파밀리아 > 구엘 공원 : 지하철\n10:40 구엘 공원\n14:00~14:20 구엘 공원 > 람블라스 : 지하철\n14:40 람블라스\n\n13일차 마드리드로\n09:00~09:15 람블라스 > 바르셀로나 산츠역 : 지하철\n10:00~12:40 바르셀로나 산츠역 > 마드리드 아토차역 : 기차\n14:00~14:15 아토차역 > 프라도 미술관 : 도보\n14:30 프라도 미술관\n\n14일차 마드리드\n10:00~10:20 프라도 미술관 > 왕궁 : 지하철\n10:30 왕궁\n13:00~13:15 왕궁 > 마요르 광장 : 도보\n13:30 마요르 광장\n\n15일차 귀국\n09:00~09:40 마요르 광장 > 마드리드 공항 : 지하철\n12:00~20:00 마드리드 공항 > 아부다비공항 : 비행기\n22:00~09:00 아부다비공항 > 인천공항 : 비행기\n";
+const TripLogic = (function () {
+  const D2R = Math.PI / 180;
+  const mx = (lng) => (lng + 180) / 360;
+  const my = (lat) => {
+    const s = Math.sin(Math.max(-85, Math.min(85, lat)) * D2R);
+    return 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI);
+  };
+  const norm = (s) => String(s).toLowerCase().replace(/[\s\-_.·,()'’"「」]/g, '');
+
+  function haversine(a, b) {
+    const R = 6371;
+    const dLat = (b.lat - a.lat) * D2R, dLng = (b.lng - a.lng) * D2R;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * D2R) * Math.cos(b.lat * D2R) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  // ---------- 장소 사전 (별칭|별칭|...  위도  경도) ----------
+  const PLACES = [
+    // 한국
+    ['인천공항|인천국제공항|인천|icn|incheon', 37.4602, 126.4407],
+    ['서울역|서울|seoul', 37.5547, 126.9707],
+    ['수원역|수원', 37.2660, 127.0001],
+    // 중동
+    ['아부다비공항|아부다비|abudhabi|auh|zayed', 24.4330, 54.6511],
+    // 맨체스터
+    ['맨체스터공항|맨체스터국제공항|manchesterairport|man', 53.3537, -2.2750],
+    ['맨체스터피카딜리역|맨체스터피카딜리|피카딜리역|피카딜리|manchesterpiccadilly|piccadilly', 53.4774, -2.2309],
+    ['올드트래포드|올드트래퍼드|맨유경기장|맨유|oldtrafford', 53.4635, -2.2898],
+    ['맨체스터|manchester', 53.4808, -2.2426],
+    // 리버풀
+    ['리버풀라임스트리트역|라임스트리트역|라임스트리트|limestreet', 53.4076, -2.9773],
+    ['안필드|안필드경기장|anfield', 53.4308, -2.9608],
+    ['알버트독|앨버트독|알버트도크|albertdock|royalalbertdock', 53.3994, -2.9920],
+    ['비틀즈스토리|비틀즈박물관|beatlesstory', 53.3993, -2.9921],
+    ['리버풀|liverpool', 53.4084, -2.9916],
+    // 런던
+    ['런던유스턴역|유스턴역|유스턴|euston', 51.5280, -0.1333],
+    ['세인트판크라스역|세인트판크라스|킹스크로스|stpancras', 51.5322, -0.1259],
+    ['히드로공항|히드로|heathrow|lhr', 51.4700, -0.4543],
+    ['빅벤|웨스트민스터|국회의사당|bigben|westminster', 51.5007, -0.1246],
+    ['버킹엄궁전|버킹엄|buckingham', 51.5014, -0.1419],
+    ['코벤트가든|coventgarden', 51.5120, -0.1228],
+    ['대영박물관|영국박물관|britishmuseum', 51.5194, -0.1270],
+    ['캠던마켓|캠던|camden', 51.5390, -0.1426],
+    ['왓포드정션|왓포드|watford', 51.6637, -0.3961],
+    ['해리포터스튜디오|워너브라더스스튜디오|워너브라더스|해리포터|wbstudio|harrypotter', 51.6903, -0.4182],
+    ['타워오브런던|런던타워|towerlondon|towerofLondon', 51.5081, -0.0759],
+    ['타워브리지|towerbridge', 51.5055, -0.0754],
+    ['버러마켓|버로우마켓|boroughmarket|borough', 51.5056, -0.0905],
+    ['포토벨로마켓|포토벨로|portobello', 51.5170, -0.2058],
+    ['런던아이|londoneye', 51.5033, -0.1195],
+    ['트라팔가광장|트라팔가|trafalgar', 51.5080, -0.1281],
+    ['내셔널갤러리|nationalgallery', 51.5089, -0.1283],
+    ['런던|london', 51.5074, -0.1278],
+    // 파리
+    ['샤를드골공항|샤를드골|cdg', 49.0097, 2.5479],
+    ['파리북역|가르뒤노르|gare du nord|garedunord', 48.8809, 2.3553],
+    ['루브르박물관|루브르|louvre', 48.8606, 2.3376],
+    ['에펠탑|eiffel', 48.8584, 2.2945],
+    ['개선문|arcdetriomphe', 48.8738, 2.2950],
+    ['샹젤리제|champselysees', 48.8698, 2.3078],
+    ['노트르담|노트르담대성당|notredame', 48.8530, 2.3499],
+    ['오르세미술관|오르세|orsay', 48.8600, 2.3266],
+    ['몽마르트|사크레쾨르|montmartre', 48.8867, 2.3431],
+    ['베르사유궁전|베르사유|versailles', 48.8049, 2.1204],
+    ['파리|paris', 48.8566, 2.3522],
+    // 바르셀로나
+    ['바르셀로나공항|엘프라트|elprat|bcn', 41.2971, 2.0785],
+    ['바르셀로나산츠역|산츠역|산츠|sants', 41.3791, 2.1400],
+    ['사그라다파밀리아|성가족성당|sagradafamilia', 41.4036, 2.1744],
+    ['구엘공원|parkguell', 41.4145, 2.1527],
+    ['람블라스|라람블라|ramblas', 41.3809, 2.1734],
+    ['카사바트요|batllo', 41.3917, 2.1649],
+    ['고딕지구|바르셀로나대성당|gothicquarter', 41.3839, 2.1763],
+    ['캄프누|campnou', 41.3809, 2.1228],
+    ['몬주익|montjuic', 41.3644, 2.1660],
+    ['보케리아시장|보케리아|boqueria', 41.3817, 2.1719],
+    ['바르셀로나|barcelona', 41.3874, 2.1686],
+    // 마드리드
+    ['마드리드공항|바라하스|madridairport|barajas|mad', 40.4983, -3.5676],
+    ['마드리드아토차역|아토차역|아토차|atocha', 40.4066, -3.6892],
+    ['프라도미술관|프라도|prado', 40.4138, -3.6921],
+    ['마드리드왕궁|왕궁|royalpalace', 40.4180, -3.7143],
+    ['마요르광장|plazamayor', 40.4155, -3.7074],
+    ['솔광장|푸에르타델솔|puertadelsol', 40.4169, -3.7035],
+    ['산티아고베르나베우|베르나베우|bernabeu', 40.4531, -3.6883],
+    ['레티로공원|retiro', 40.4153, -3.6844],
+    ['레이나소피아|소피아미술관|reinasofia', 40.4082, -3.6947],
+    ['마드리드|madrid', 40.4168, -3.7038],
+  ].map(([al, lat, lng]) => {
+    const aliases = al.split('|').map(norm).filter(Boolean);
+    return { name: al.split('|')[0], aliases, lat, lng };
+  });
+
+  // 온라인 검색으로 찾은 장소 캐시 (정규화한 검색어 → {lat,lng})
+  const GEO = new Map();
+
+  // '이름@주소': 주소를 온라인 검색해서 위치를 찾는다.
+  function splitAddr(s) {
+    const m = s.match(/^(.*?)@\s*(.+)$/);
+    return m ? { name: m[1].trim(), addr: m[2].trim() } : null;
+  }
+  // 온라인 검색에 쓸 문구 (주소가 있으면 주소, 없으면 적은 이름 그대로)
+  function geoQuery(raw) {
+    const s = String(raw).trim();
+    const a = splitAddr(s);
+    return a ? a.addr : s;
+  }
+
+  // 비슷한 이름의 다른 장소를 섞지 않기 위한 규칙:
+  // '올드트래포드역'은 별칭 '올드트래포드'(경기장)를 포함하지만 다른 장소이므로 자동으로 붙이지 않는다.
+  const DISTINCT = ['역', '공항', '정류장', '터미널', '호텔', '숙소', '게스트하우스', '호스텔', '박물관', '미술관', '공원', '광장', '궁전', '성당', '대성당', '시장', '마켓', '다리', '브리지', '타워', '센터', '항구', '선착장', '정션', '출구', '입구', '주차장', 'station', 'airport', 'hotel', 'museum', 'park', 'square', 'bridge', 'market'];
+  const SINGLE = ['궁', '몰']; // 한 글자는 끝에 붙을 때만 다른 장소로 본다
+  const SAME = ['경기장', '스타디움', '구장', 'stadium', '시내', '중심가', '중심', '근처', '인근', '부근', '주변', '일대', '근교', '앞', 'city', 'downtown'];
+  const DISTINCT_N = DISTINCT.map(norm), SAME_N = SAME.map(norm);
+  function sameEntity(n, alias) {
+    let rem = n.replace(alias, '');
+    SAME_N.slice().sort((x, y) => y.length - x.length).forEach((w) => { rem = rem.split(w).join(''); });
+    if (!rem) return true;
+    if (DISTINCT_N.some((w) => (w.length > 1 ? rem.startsWith(w) || rem.endsWith(w) : rem.endsWith(w)) && !alias.includes(w))) return false;
+    if (SINGLE.some((w) => rem.endsWith(norm(w)) && !alias.includes(norm(w)))) return false;
+    return true;
+  }
+
+  function lookup(raw) {
+    const s = String(raw).trim();
+    if (!s) return null;
+    // 주소: 이름@주소 (온라인 검색으로 찾은 결과가 있으면 사용)
+    const ad = splitAddr(s);
+    if (ad) {
+      const g = GEO.get(norm(ad.addr));
+      return g ? { name: ad.name || ad.addr, lat: g.lat, lng: g.lng, custom: true } : null;
+    }
+    const n = norm(s);
+    if (!n) return null;
+    // 1) 완전 일치
+    for (const p of PLACES) if (p.aliases.includes(n)) return { name: s, lat: p.lat, lng: p.lng };
+    const g = GEO.get(n);
+    if (g) return { name: s, lat: g.lat, lng: g.lng };
+    // 2) 입력이 별칭을 포함 → 가장 긴 별칭 우선 (뒤에 붙은 말이 다른 종류의 장소면 제외)
+    let best = null, bestLen = 0;
+    for (const p of PLACES) for (const a of p.aliases) {
+      if (a.length < 2 || (/^[a-z]+$/.test(a) && a.length < 5)) continue;
+      if (n.includes(a) && a.length > bestLen && sameEntity(n, a)) { best = p; bestLen = a.length; }
+    }
+    if (best) return { name: s, lat: best.lat, lng: best.lng };
+    // 3) 별칭이 입력을 포함 (입력이 3글자 이상, 후보가 하나뿐일 때만)
+    if (n.length >= 3) {
+      const hits = PLACES.filter((p) => p.aliases.some((a) => a.includes(n)));
+      if (hits.length === 1) return { name: s, lat: hits[0].lat, lng: hits[0].lng };
+    }
+    return null;
+  }
+
+  // ---------- 교통수단 ----------
+  const MODES = {
+    plane:  { ko: '비행기', emoji: '✈️', kw: ['비행기', '항공', '항공편', '비행', '플라이트', 'flight', 'plane', 'fly', '✈'] },
+    train:  { ko: '기차',   emoji: '🚆', kw: ['기차', '열차', '고속열차', '고속철', '유로스타', 'ktx', 'ave', 'train', '철도', '🚆'] },
+    subway: { ko: '지하철', emoji: '🚇', kw: ['지하철', '메트로', '튜브', 'subway', 'tube', 'metro', 'underground', '🚇'] },
+    tram:   { ko: '트램',   emoji: '🚊', kw: ['트램', '전차', '메트로링크', 'tram', '🚊'] },
+    bus:    { ko: '버스',   emoji: '🚌', kw: ['버스', 'bus', '🚌'] },
+    walk:   { ko: '도보',   emoji: '🚶', kw: ['도보', '걸어서', '걷기', '걸어', '산책', 'walk', 'walking', '🚶'] },
+    taxi:   { ko: '택시',   emoji: '🚕', kw: ['택시', '우버', '볼트', '렌터카', '자동차', '차', 'taxi', 'uber', 'car', '🚕'] },
+    ship:   { ko: '배',     emoji: '⛴️', kw: ['배', '페리', '크루즈', '선박', 'ferry', 'ship', 'boat', '⛴'] },
+  };
+  const MODE_ORDER = ['plane', 'train', 'subway', 'tram', 'bus', 'walk', 'taxi', 'ship'];
+
+  function modeExact(word) {
+    const w = norm(word);
+    if (!w || (w.length < 2 && /^[a-z가-힣]$/.test(w))) return null;
+    for (const id of MODE_ORDER) for (const k of MODES[id].kw) { if (norm(k) === w) return id; }
+    return null;
+  }
+  function detectMode(word) {
+    const w = norm(word);
+    if (!w) return null;
+    for (const id of MODE_ORDER) {
+      for (const k of MODES[id].kw) { if (norm(k) === w) return id; }
+    }
+    let best = null, bestLen = 0;
+    for (const id of MODE_ORDER) {
+      for (const k of MODES[id].kw) {
+        const kk = norm(k);
+        if (kk.length >= 2 && w.includes(kk) && kk.length > bestLen) { best = id; bestLen = kk.length; }
+      }
+    }
+    if (best) return best;
+    return null;
+  }
+
+  function guessMode(km) {
+    if (km > 1200) return 'plane';
+    if (km > 120) return 'train';
+    if (km > 2.5) return 'subway';
+    return 'walk';
+  }
+
+  // ---------- 계획 파싱 (이벤트 목록) ----------
+  const ARROW = /\s*(?:->|=>|→|➜|>|⇒)\s*/;
+  const ARROW_TEST = /(?:->|=>|→|➜|>|⇒)/;
+  // 시간 한 덩어리: 10:30 / 10시 / 10시 30분 / 3시 반 / 오후 3시 (숫자만 있는 건 장소 이름과 헷갈려서 제외)
+  const TOK = '(?:(오전|오후|am|pm)\\s*)?(\\d{1,2})\\s*(?::\\s*(\\d{2})|시\\s*(?:(\\d{1,2})\\s*분?|(반))?)';
+  const TIME_RE = new RegExp('^' + TOK + '(?:\\s*[~\\-–—]\\s*' + TOK + ')?\\s*(.*)$', 'i');
+  const pad = (h, m) => String(h).padStart(2, '0') + ':' + m;
+  function tokTime(mer, h, m1, m2, half, inherit) {
+    let hh = parseInt(h, 10);
+    const mm = m1 !== undefined ? m1 : half ? '30' : m2 !== undefined ? m2 : '00';
+    const w = (mer || inherit || '').toLowerCase();
+    if ((w === '오후' || w === 'pm') && hh < 12) hh += 12;
+    else if ((w === '오전' || w === 'am') && hh === 12) hh = 0;
+    if (hh > 24 || parseInt(mm, 10) > 59) return null;
+    return pad(hh, String(parseInt(mm, 10)).padStart(2, '0'));
+  }
+  // 전각 문자(＞ ： ～ 등)와 앞머리 글머리표(- * •)를 정리
+  const tidy = (l) => l.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/[〜∼]/g, '~').replace(/^[-*•·]\s+/, '');
+
+  function parsePlan(text) {
+    const events = [];
+    const errors = [];
+    const warnings = [];
+    const missing = new Set();
+    const days = {};
+    let day = 0;
+    const lines = String(text).split(/\r?\n/);
+
+    lines.forEach((rawLine, idx) => {
+      const line = tidy(rawLine.trim());
+      if (!line || line.startsWith('#') || line.startsWith('//')) return;
+      const ln = idx + 1;
+
+      const dm = line.match(/^(?:day\s*(\d+)|(\d+)\s*일\s*차?)\s*[:：\-]?\s*(.*)$/i);
+      if (dm) {
+        day = parseInt(dm[1] || dm[2], 10);
+        days[day] = { label: (dm[3] || '').trim() };
+        return;
+      }
+      // 번호 없이 '다음날 제목'
+      const nm = line.match(/^다음\s*날\s*[:\-]?\s*(.*)$/);
+      if (nm) {
+        day = (day || 1) + 1;
+        days[day] = { label: (nm[1] || '').trim() };
+        return;
+      }
+
+      // 시간
+      let time = null, endTime = null, rest = line;
+      const tm = line.match(TIME_RE);
+      if (tm) {
+        time = tokTime(tm[1], tm[2], tm[3], tm[4], tm[5]);
+        if (tm[7] !== undefined) endTime = tokTime(tm[6], tm[7], tm[8], tm[9], tm[10], tm[1]);
+        if (time) rest = tm[11].trim();
+        else { time = null; endTime = null; }
+      }
+      // 메모 (' / ' 뒤)
+      let memo = '';
+      const mi = rest.search(/\s+\/\s+|\s+\/$/);
+      if (mi >= 0) { memo = rest.slice(mi).replace(/^\s*\/\s*/, '').trim(); rest = rest.slice(0, mi).trim(); }
+      if (!rest) { errors.push(`${ln}번째 줄: 장소나 이동을 적어 주세요.`); return; }
+      if (!day) { day = 1; days[1] = days[1] || { label: '' }; }
+
+      if (!ARROW_TEST.test(rest)) {
+        // 장소 이벤트
+        const pl = lookup(rest);
+        if (!pl) { missing.add(rest); errors.push(`${ln}번째 줄: '${rest}'의 위치를 찾지 못했어요. '${rest}@주소'처럼 주소(영문도 가능)를 적어 주세요.`); return; }
+        events.push({ kind: 'place', day, time, endTime, memo, ln, place: pl });
+        return;
+      }
+
+      // 이동 이벤트
+      let modeWord = null, route = rest;
+      let mm = rest.match(/^(.*?)\s*[:：|]\s*([^:：|>→]+?)\s*$/);
+      if (mm) { route = mm[1]; modeWord = mm[2]; }
+      else {
+        mm = rest.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+        if (mm && detectMode(mm[2])) { route = mm[1]; modeWord = mm[2]; }
+      }
+      if (!modeWord) {
+        // ':' 없이 끝에 교통수단만 붙여도 됨: '피카딜리역 > 올드 트래포드 트램', '... > 안필드 🚌'
+        const em = route.match(/^(.*?)\s*(\p{Extended_Pictographic}\uFE0F?)$/u);
+        const lm = route.match(/^(.*\S)\s+(\S+)$/);
+        const cand = em && ARROW_TEST.test(em[1]) ? em : lm && ARROW_TEST.test(lm[1]) ? lm : null;
+        if (cand && !/(?:->|=>|→|➜|>|⇒)\s*$/.test(cand[1]) && modeExact(cand[2].replace(/️/g, ''))) { route = cand[1]; modeWord = cand[2].replace(/️/g, ''); }
+      }
+      let mode = null;
+      if (modeWord) {
+        mode = detectMode(modeWord);
+        if (!mode) { errors.push(`${ln}번째 줄: '${modeWord.trim()}'은(는) 알 수 없는 교통수단이에요.`); return; }
+      }
+      let parts = route.split(ARROW).map((p) => p.trim());
+      const startsWithArrow = parts.length && parts[0] === '';
+      if (startsWithArrow) parts = parts.slice(1);
+      if (parts.length < 1 || (!startsWithArrow && parts.length < 2)) {
+        errors.push(`${ln}번째 줄: '출발 > 도착 : 교통수단' 형식으로 적어 주세요.`); return;
+      }
+      const pts = [];
+      let bad = false;
+      if (startsWithArrow) {
+        // 바로 앞 이벤트의 끝 위치에서 출발
+        let prevEnd = null;
+        for (let k = events.length - 1; k >= 0; k--) {
+          const e = events[k];
+          prevEnd = e.kind === 'move' ? e.leg.to : e.place; break;
+        }
+        if (!prevEnd) { errors.push(`${ln}번째 줄: 앞선 출발지가 없어요.`); return; }
+        pts.push(prevEnd);
+      }
+      parts.forEach((p) => {
+        const pl = lookup(p);
+        if (!pl) { missing.add(p); errors.push(`${ln}번째 줄: '${p}'의 위치를 찾지 못했어요. '${p}@주소'처럼 주소(영문도 가능)를 적어 주세요.`); bad = true; }
+        else pts.push(pl);
+      });
+      if (bad) return;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const km = haversine(a, b);
+        if (km < 0.02) { warnings.push(`${ln}번째 줄: '${a.name}'과(와) '${b.name}'이(가) 같은 위치라 건너뛰었어요.`); continue; }
+        let md = mode, guessed = false;
+        if (!md) { md = guessMode(km); guessed = true; }
+        events.push({
+          kind: 'move', day, memo: i === 0 ? memo : '', ln,
+          time: i === 0 ? time : null, endTime: i === pts.length - 2 ? endTime : null,
+          leg: { from: a, to: b, mode: md, day, km, guessed },
+        });
+      }
+    });
+
+    // 위치 이어붙이기: 장소 이벤트에서 이동 경로(hop) 만들기, 어긋난 출발지 경고
+    let prev = null;
+    events.forEach((ev) => {
+      if (ev.kind === 'move') {
+        if (prev && haversine(prev, ev.leg.from) > 0.3) warnings.push(`${ev.ln}번째 줄: 출발지가 바로 앞 이벤트의 위치와 달라요.`);
+        prev = ev.leg.to;
+      } else {
+        if (prev) {
+          const km = haversine(prev, ev.place);
+          if (km > 0.02) ev.leg = { from: prev, to: ev.place, mode: guessMode(km), day: ev.day, km, guessed: true, hop: true };
+        }
+        prev = ev.place;
+      }
+    });
+    events.forEach((ev) => {
+      if (!ev.leg) return;
+      buildPath(ev.leg);
+      if (ev.kind !== 'move') return;
+      const l = ev.leg, M = MODES[l.mode].ko;
+      if (l.mode === 'walk' && l.km > 8) warnings.push(`${ev.ln}번째 줄: ${l.from.name} → ${l.to.name}은(는) ${Math.round(l.km)}km라 도보로는 멀어요.`);
+      if (l.mode === 'plane' && l.km < 150) warnings.push(`${ev.ln}번째 줄: ${l.from.name} → ${l.to.name}은(는) ${Math.round(l.km)}km라 ${M}으로는 가까워요.`);
+      if (l.guessed) warnings.push(`${ev.ln}번째 줄: 교통수단이 없어 '${M}'(으)로 추정했어요.`);
+    });
+    const seen = new Set();
+    const uniqWarn = warnings.filter((w) => (seen.has(w) ? false : (seen.add(w), true)));
+    return { events, errors, warnings: uniqWarn, days, missing: [...missing] };
+  }
+
+  // ---------- 경로(곡선) ----------
+  const BEND = { plane: 0.2, train: 0.09, subway: 0.09, tram: 0.09, bus: 0.09, walk: 0.06, taxi: 0.08, ship: 0.1 };
+
+  function buildPath(leg) {
+    const x1 = mx(leg.from.lng), y1 = my(leg.from.lat);
+    const x2 = mx(leg.to.lng), y2 = my(leg.to.lat);
+    const dx = x2 - x1, dy = y2 - y1;
+    const d = Math.hypot(dx, dy) || 1e-9;
+    const b = (BEND[leg.mode] || 0.08) * d;
+    const cx = (x1 + x2) / 2 + (-dy / d) * b;
+    const cy = (y1 + y2) / 2 + (dx / d) * b;
+    const N = 56;
+    const xs = new Float64Array(N + 1), ys = new Float64Array(N + 1), cum = new Float64Array(N + 1);
+    let minx = 9, maxx = -9, miny = 9, maxy = -9;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, u = 1 - t;
+      const x = u * u * x1 + 2 * u * t * cx + t * t * x2;
+      const y = u * u * y1 + 2 * u * t * cy + t * t * y2;
+      xs[i] = x; ys[i] = y;
+      if (x < minx) minx = x; if (x > maxx) maxx = x;
+      if (y < miny) miny = y; if (y > maxy) maxy = y;
+      if (i) cum[i] = cum[i - 1] + Math.hypot(x - xs[i - 1], y - ys[i - 1]);
+    }
+    leg.path = { xs, ys, cum, len: cum[N], N, minx, maxx, miny, maxy };
+  }
+
+  function pathAt(leg, p) {
+    const P = leg.path;
+    const target = Math.max(0, Math.min(1, p)) * P.len;
+    let lo = 0, hi = P.N;
+    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (P.cum[mid] <= target) lo = mid; else hi = mid; }
+    const seg = P.cum[hi] - P.cum[lo] || 1e-12;
+    const f = (target - P.cum[lo]) / seg;
+    const x = P.xs[lo] + (P.xs[hi] - P.xs[lo]) * f;
+    const y = P.ys[lo] + (P.ys[hi] - P.ys[lo]) * f;
+    const heading = Math.atan2(P.ys[hi] - P.ys[lo], P.xs[hi] - P.xs[lo]);
+    return { x, y, heading, idx: lo, f };
+  }
+
+  // ---------- 타임라인 ----------
+  const SLOW = 2; // 이동 시간 배율 (클수록 느려짐)
+  const DUR = {
+    plane:  { a: 2.4,  b: 0.05, min: 3.2, max: 7 },
+    train:  { a: 1.8,  b: 0.07, min: 2.4, max: 4.3 },
+    subway: { a: 1.45, b: 0.42, min: 1.9, max: 3.1 },
+    tram:   { a: 1.45, b: 0.42, min: 1.9, max: 3.1 },
+    bus:    { a: 1.45, b: 0.42, min: 1.9, max: 3.1 },
+    walk:   { a: 1.2,  b: 0.66, min: 1.6, max: 2.8 },
+    taxi:   { a: 1.45, b: 0.42, min: 1.8, max: 3.1 },
+    ship:   { a: 2.2,  b: 0.14, min: 2.9, max: 5.4 },
+  };
+  function moveDuration(leg) {
+    const c = DUR[leg.mode] || DUR.bus;
+    return SLOW * Math.max(c.min, Math.min(c.max, c.a + c.b * Math.sqrt(leg.km)));
+  }
+
+  // ---------- 붙여넣은 일정을 앱 양식으로 정리 ----------
+  // 마크다운/번호 목록/'Day 1'/'1월 14일'/'(비행기, 2시간)'/'✈️ A → B' 같은 흔한 형태를 고친다.
+  // 이미 앱 양식인 줄은 그대로 둔다(여러 번 돌려도 결과가 같음).
+  // 문장 속에서 교통수단 낱말 찾기: '도보 15분' → {kw:'도보', id:'walk'}
+  function modeInText(text) {
+    let best = null;
+    for (const id of MODE_ORDER) {
+      for (const k of MODES[id].kw) {
+        if (k.length >= 2 && text.toLowerCase().includes(k.toLowerCase()) && (!best || k.length > best.kw.length)) best = { kw: k, id };
+      }
+    }
+    return best;
+  }
+  function normalizeBody(s0) {
+    let s = s0, memo = '', modeText = null;
+    const mi = s.search(/\s+\/\s+|\s+\/$/);
+    if (mi >= 0) { memo = s.slice(mi).replace(/^\s*\/\s*/, '').trim(); s = s.slice(0, mi).trim(); }
+    const addMemo = (t) => { t = (t || '').trim(); if (t) memo = memo ? `${t} ${memo}` : t; };
+    // 앞쪽 이모지: 교통수단이면 모드로, 아니면 버림
+    const lead = s.match(/^((?:\p{Extended_Pictographic}\uFE0F?\s*)+)/u);
+    if (lead) {
+      for (const ch of lead[1].replace(/\uFE0F/g, '').match(/\p{Extended_Pictographic}/gu) || []) {
+        const m = modeExact(ch);
+        if (m && !modeText) modeText = MODES[m].ko;
+      }
+      s = s.slice(lead[0].length).trim();
+    }
+    s = s.replace(/\s*(?:➔|➡\uFE0F?|⟶|➝|⇨|▶|►|—>|-->|>>)\s*/g, ' > ');
+    const dm = s.search(/\s[-–—]\s/);
+    if (dm >= 0) { addMemo(s.slice(dm).replace(/^\s[-–—]\s/, '')); s = s.slice(0, dm).trim(); }
+    const hasArrow = ARROW_TEST.test(s);
+    // 끝의 괄호: 교통수단이면 모드로, 아니면 메모로
+    const pm = s.match(/^(.*?\S)\s*[(（]([^()（）]*)[)）]\s*$/);
+    if (pm) {
+      const parts = pm[2].split(/[,，·]/).map((x) => x.trim()).filter(Boolean);
+      const hasColon = /[:：|]\s*[^:：|>→]+$/.test(pm[1]);
+      const k = hasArrow && !hasColon ? parts.findIndex((x) => modeInText(x)) : -1;
+      if (k >= 0) {
+        const mt = modeInText(parts[k]);
+        if (!modeText) modeText = mt.kw;
+        const remain = parts[k].replace(mt.kw, '').trim();
+        if (remain) parts[k] = remain; else parts.splice(k, 1);
+      }
+      addMemo(parts.join(', '));
+      s = pm[1].trim();
+    }
+    if (hasArrow) {
+      const cm = s.match(/^(.*?)\s*[:：|]\s*([^:：|>→]+?)\s*$/);
+      if (cm && detectMode(cm[2])) { modeText = cm[2]; s = cm[1]; }
+    } else if (!/@/.test(s)) {
+      const cm = s.match(/^([^:：]+?)\s*[:：]\s*(.+)$/);
+      if (cm) { addMemo(cm[2]); s = cm[1]; }
+    }
+    return s + (modeText ? ` : ${modeText}` : '') + (memo ? ` / ${memo}` : '');
+  }
+
+  function normalizeLine(raw, ctx) {
+    let l = raw.trim();
+    if (!l || l.startsWith('//')) return raw;
+    const dayish = /^#{2,6}\s*(?:day\s*\d|\d+\s*일\s*차|\d{1,2}\s*(?:\/|월))/i;
+    if (l.startsWith('#') && !dayish.test(l)) return raw; // 앱 양식의 메모 줄
+    if (l.startsWith('|')) { // 마크다운 표
+      if (/^\|[\s:|\-]+\|?$/.test(l)) return '';
+      const cells = l.split('|').map((x) => x.trim()).filter(Boolean);
+      if (!cells.length) return '';
+      if (TIME_RE.test(cells[0])) l = `${cells[0]} ${cells[1] || ''}${cells.length > 2 ? ' / ' + cells.slice(2).join(' ') : ''}`;
+      else if (!/^(?:day\s*\d|\d+\s*일\s*차)/i.test(cells[0])) return `# ${cells.join(' | ')}`;
+      else l = cells.join(' ');
+    }
+    l = tidy(l).replace(/^#{2,6}\s*(?=day\s*\d|\d+\s*일\s*차|\d{1,2}\s*(?:\/|월))/i, '');
+    l = l.replace(/\*\*|__|`/g, '').replace(/^[▪▶►✔✅☑📌🔹🔸]+\uFE0F?\s*/u, '');
+    l = l.replace(/^\d+[.)]\s+(?=(?:오전|오후|am|pm)?\s*\d{1,2}\s*(?::|시))/i, '').trim();
+    // 일차 제목
+    const dh = l.match(/^(?:day\s*(\d+)|(\d+)\s*일\s*차)\s*[:\-–—.·]?\s*(.*)$/i);
+    if (dh) { ctx.day = parseInt(dh[1] || dh[2], 10); return `${ctx.day}일차${dh[3].trim() ? ' ' + dh[3].trim() : ''}`; }
+    // 날짜만 있는 제목 ('1월 14일 (수) 출국', '1/14 리버풀')
+    const dt = l.match(/^(\d{1,2})\s*(?:월\s*(\d{1,2})\s*일?|\/\s*(\d{1,2}))\s*(?:\([^)]*\)|[월화수목금토일]요일)?\s*[:\-–—·]?\s*(.*)$/);
+    if (dt && !ARROW_TEST.test(dt[4])) {
+      ctx.day += 1;
+      return `${ctx.day}일차 ${dt[1]}/${dt[2] || dt[3]}${dt[4].trim() ? ' ' + dt[4].trim() : ''}`;
+    }
+    // 시간이 있는 줄, 또는 화살표가 있는 줄만 정리
+    const tm = l.match(TIME_RE);
+    const timed = !!(tm && tokTime(tm[1], tm[2], tm[3], tm[4], tm[5]));
+    if (!timed && !ARROW_TEST.test(l) && !/[➔➡⟶➝⇨▶►]|-->|>>/.test(l)) return l === raw.trim() ? raw : l;
+    let prefix = '', rest = l;
+    if (timed) {
+      rest = tm[11];
+      prefix = l.slice(0, l.length - rest.length).trim();
+      rest = rest.replace(/^[\-–—:：|.·)]+\s*/, '');
+    }
+    const body = normalizeBody(rest.trim());
+    return prefix ? `${prefix} ${body}`.trim() : body;
+  }
+
+  // startDay: 붙여넣는 위치 앞쪽에 이미 있는 마지막 일차 번호
+  function normalizePlan(text, startDay) {
+    const ctx = { day: startDay || 0 };
+    let changed = 0;
+    const out = String(text).replace(/\r\n?/g, '\n').split('\n').map((raw) => {
+      const n = normalizeLine(raw, ctx);
+      if (raw.trim() && n !== raw.trim() && n !== raw) changed++;
+      return n;
+    });
+    return { text: out.join('\n'), changed };
+  }
+
+  return { normalizePlan, geoQuery, PLACES, GEO, MODES, MODE_ORDER, parsePlan, lookup, moveDuration, pathAt, haversine, mx, my, norm, detectMode };
+})();
+if (typeof module !== 'undefined') module.exports = TripLogic;
+
+(function () {
+  'use strict';
+  const L = TripLogic;
+  const $ = (s) => document.querySelector(s);
+  const canvas = $('#overlay');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const D2R = Math.PI / 180;
+
+  // ---------- 저장소 (실패해도 동작) ----------
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 저장 불가 환경 */ } },
+  };
+
+  // ---------- 상태 ----------
+  const HATS = ['#ff4d6d', '#ffb020', '#3fc1a5', '#4c8dff', '#a66bff', '#f5f5f5'];
+  const char = { name: '여행자', hat: HATS[0] };
+  const state = { plan: null, viewDay: 1 };
+  let events = [];
+  let nodes = [];
+  // ctl.curIdx: 마지막으로 끝낸 이벤트 번호 (-1이면 출발 전)
+  const ctl = { curIdx: -1, hold: null, anim: null, autoOn: false, autoTimer: null, arrivedAt: -10, lastDay: 1, camBoost: 1 };
+  const cam = { x: 0.5, y: 0.4, lz: Math.log(900) };
+  const hud = { top: 70, bottom: 120 };
+  let W = 0, H = 0, DPR = 1, S = 1;
+  let theme = {};
+  let veh = { mode: null, since: 0, facing: 1 };
+
+  // ---------- 테마 ----------
+  function isDark() {
+    const t = document.documentElement.dataset.theme;
+    return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+  function readTheme() {
+    const cs = getComputedStyle(document.documentElement);
+    const g = (n) => cs.getPropertyValue(n).trim();
+    theme = {
+      sea: g('--sea'), land: g('--land'), landEdge: g('--land-edge'), border: g('--border'), grid: g('--grid'),
+      ink: g('--ink'), ink2: g('--ink-2'), panel: g('--panel'), accent: g('--accent'),
+      halo: '#ffffff',
+      modes: {}
+    };
+    L.MODE_ORDER.forEach((m) => { theme.modes[m] = g('--c-' + m); });
+  }
+  readTheme();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
+  new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  // ---------- Leaflet 지도 ----------
+  // 기본: OpenFreeMap 벡터 타일(MapLibre, 키 불필요) + 영어 라벨. 실패하면 OSM 래스터 타일.
+  const LF = window.L;
+  const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+  const OFM_ATTR = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> Data from ' + OSM_ATTR;
+  const OFM_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+  const map = LF.map('map', {
+    zoomSnap: 0, zoomAnimation: false, markerZoomAnimation: false, zoomControl: false, keyboard: false,
+    minZoom: 2, maxZoom: 19, maxBounds: [[-85, -180], [85, 180]], maxBoundsViscosity: 1,
+  });
+  LF.control.zoom({ position: 'topleft' }).addTo(map);
+  map.setView([50, 5], 4);
+  let baseLayer = null, baseKind = null;
+  function setBase(kind, layer) {
+    if (baseLayer) map.removeLayer(baseLayer);
+    baseLayer = layer; baseKind = kind;
+    layer.addTo(map);
+  }
+  function useOsm() {
+    if (baseKind === 'osm') return;
+    setBase('osm', LF.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: OSM_ATTR }));
+  }
+  // 지명 라벨을 영어(name:en → name:latin → name)로 통일
+  const ENGLISH = ['coalesce', ['get', 'name:en'], ['get', 'name:latin'], ['get', 'name']];
+  async function useVector() {
+    if (!LF.maplibreGL) throw new Error('maplibre plugin missing');
+    const style = await (await fetch(OFM_STYLE)).json();
+    style.layers.forEach((ly) => {
+      const tf = ly.layout && ly.layout['text-field'];
+      if (tf && JSON.stringify(tf).includes('name')) ly.layout['text-field'] = ENGLISH;
+    });
+    const layer = LF.maplibreGL({ style, attribution: OFM_ATTR, padding: 0.15 });
+    setBase('vector', layer);
+    const gl = layer.getMaplibreMap();
+    let loaded = false;
+    gl.on('load', () => { loaded = true; });
+    setTimeout(() => { if (!loaded && baseKind === 'vector') { console.warn('vector map timeout, using OSM'); useOsm(); } }, 25000);
+  }
+  useVector().catch((e) => { console.warn('vector map failed, using OSM', e && e.message); useOsm(); });
+
+  // ---------- 크기 ----------
+  function measureHud() {
+    const a = $('#app').getBoundingClientRect();
+    const t = $('#hudTop').getBoundingClientRect();
+    const b = $('#hudBottom').getBoundingClientRect();
+    hud.top = Math.max(0, t.bottom - a.top);
+    hud.bottom = Math.max(0, a.bottom - b.top);
+    document.documentElement.style.setProperty('--hudt', (hud.top + 4) + 'px');
+    document.documentElement.style.setProperty('--hudb', (hud.bottom + 2) + 'px');
+    invalidateFits();
+  }
+  function resize() {
+    const r = $('#app').getBoundingClientRect();
+    W = Math.max(200, r.width); H = Math.max(200, r.height);
+    DPR = Math.min(2.5, window.devicePixelRatio || 1);
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    map.invalidateSize({ animate: false });
+    S = Math.max(0.8, Math.min(1.3, Math.min(W, H) / 520));
+    measureHud();
+  }
+  new ResizeObserver(resize).observe($('#app'));
+  new ResizeObserver(measureHud).observe($('#hudTop'));
+  new ResizeObserver(measureHud).observe($('#hudBottom'));
+
+  // ---------- 카메라 (Leaflet) ----------
+  const invLat = (y) => (2 * Math.atan(Math.exp(Math.PI * (1 - 2 * y))) - Math.PI / 2) / (Math.PI / 180);
+  function invalidateFits() { events.forEach((ev) => { if (ev.leg) ev.leg._b = null; }); }
+  function mkTarget(b, maxZoom) {
+    return { b, maxZoom, key: [b[0][0], b[0][1], b[1][0], b[1][1]].map((v) => v.toFixed(5)).join(',') + ',' + maxZoom };
+  }
+  function legTarget(leg) {
+    if (!leg._b) { const P = leg.path; leg._b = [[invLat(P.maxy), P.minx * 360 - 180], [invLat(P.miny), P.maxx * 360 - 180]]; }
+    return mkTarget(leg._b, 17);
+  }
+  function placeTarget(p) {
+    const d = 0.0045, dl = d / Math.cos(p.lat * D2R);
+    return mkTarget([[p.lat - d, p.lng - dl], [p.lat + d, p.lng + dl]], 16);
+  }
+  function eventTarget(idx) {
+    const ev = events[Math.max(0, idx)];
+    return ev.kind === 'move' ? legTarget(ev.leg) : placeTarget(ev.place);
+  }
+  function camTarget() {
+    const a = ctl.anim;
+    if (a) {
+      // 여러 칸을 건너뛸 때는 중간 구간마다 날아가지 않고 도착 지점으로 바로 이동
+      if (ctl.camBoost > 1) return eventTarget(a.items[a.items.length - 1].after);
+      const it = a.items[a.i];
+      return it.leg ? legTarget(it.leg) : eventTarget(it.e);
+    }
+    return eventTarget(ctl.curIdx);
+  }
+  let camKey = null;
+  function steerCamera(tg) {
+    if (tg.key === camKey) return;
+    const first = camKey === null;
+    camKey = tg.key;
+    const bnd = LF.latLngBounds(tg.b);
+    const opt = { paddingTopLeft: [16, hud.top + 10], paddingBottomRight: [16, hud.bottom + 10], maxZoom: tg.maxZoom };
+    if (first || reduceMotion) { map.fitBounds(bnd, Object.assign({ animate: false }, opt)); return; }
+    const tz = Math.min(tg.maxZoom, map.getBoundsZoom(bnd, false, LF.point(32, hud.top + hud.bottom + 20)));
+    const dz = Math.abs(tz - map.getZoom());
+    const km = map.getCenter().distanceTo(bnd.getCenter()) / 1000;
+    const base = 0.8 + 0.28 * dz + Math.min(0.9, Math.log10(1 + km) * 0.25);
+    const duration = Math.max(0.6, Math.min(2.4, base)) / (1 + 0.5 * (ctl.camBoost - 1));
+    map.flyToBounds(bnd, Object.assign({ duration, easeLinearity: 0.2 }, opt));
+  }
+  // Leaflet의 현재 중심/줌을 오버레이 좌표계(0~1 메르카토르)로 옮김
+  function syncCam() {
+    const c = map.getCenter();
+    cam.x = L.mx(c.lng); cam.y = L.my(c.lat); cam.lz = Math.log(256 * Math.pow(2, map.getZoom()));
+  }
+  // ---------- 그리기 도우미 ----------
+  function rrPath(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  const easeIO = (t) => 0.5 - 0.5 * Math.cos(Math.PI * Math.max(0, Math.min(1, t)));
+  const easeOutBack = (t) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+  const modeColor = (m) => theme.modes[m] || theme.accent;
+  const INK = '#1d2b38';
+  const GLASS = '#d4ebff';
+
+  function drawAvatar(cx, cy, r, time) {
+    // 얼굴
+    ctx.fillStyle = '#ffdcbc';
+    ctx.strokeStyle = INK; ctx.lineWidth = Math.max(1, r * 0.11);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // 머리카락
+    ctx.fillStyle = '#3b2a22';
+    ctx.beginPath(); ctx.arc(cx, cy, r * 1.0, Math.PI * 0.9, Math.PI * 2.1); ctx.closePath(); ctx.fill();
+    // 모자
+    ctx.fillStyle = char.hat;
+    ctx.beginPath(); ctx.arc(cx, cy - r * 0.06, r * 1.04, Math.PI * 1.0, Math.PI * 2.0); ctx.closePath(); ctx.fill();
+    ctx.lineWidth = Math.max(1, r * 0.1); ctx.stroke();
+    ctx.fillStyle = char.hat;
+    ctx.beginPath(); ctx.ellipse(cx + r * 0.62, cy - r * 0.14, r * 0.62, r * 0.17, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // 눈 (가끔 깜빡)
+    const blink = (Math.sin(time * 1.7) > 0.985) ? 0.2 : 1;
+    ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.ellipse(cx - r * 0.3, cy + r * 0.2, r * 0.1, r * 0.13 * blink, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + r * 0.32, cy + r * 0.2, r * 0.1, r * 0.13 * blink, 0, 0, Math.PI * 2); ctx.fill();
+    // 볼, 입
+    ctx.fillStyle = 'rgba(255,110,130,.45)';
+    ctx.beginPath(); ctx.arc(cx - r * 0.52, cy + r * 0.42, r * 0.14, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + r * 0.55, cy + r * 0.42, r * 0.14, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = Math.max(1, r * 0.1); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(cx + r * 0.02, cy + r * 0.4, r * 0.2, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  }
+
+  function wheel(x, y, r, spin) {
+    ctx.fillStyle = '#18222c';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#c9d4dd'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x + Math.cos(spin) * r * 0.7, y + Math.sin(spin) * r * 0.7); ctx.lineTo(x - Math.cos(spin) * r * 0.7, y - Math.sin(spin) * r * 0.7); ctx.stroke();
+  }
+
+  function windowWithAvatar(x, y, w, h, time) {
+    ctx.save();
+    rrPath(x, y, w, h, 3); ctx.clip();
+    ctx.fillStyle = GLASS; ctx.fillRect(x, y, w, h);
+    drawAvatar(x + w / 2, y + h * 0.62, Math.min(w, h) * 0.5, time);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(29,43,56,.55)'; ctx.lineWidth = 1;
+    rrPath(x, y, w, h, 3); ctx.stroke();
+  }
+
+  function drawSideVehicle(mode, col, time, spin) {
+    ctx.lineJoin = 'round';
+    if (mode === 'bus') {
+      rrPath(-27, -14, 54, 25, 6); ctx.fillStyle = col; ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.fillStyle = GLASS;
+      [-21, -9, 3].forEach((x) => { rrPath(x, -9, 9, 8, 2); ctx.fill(); });
+      windowWithAvatar(14, -10, 11, 11, time);
+      ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(-27, 4, 54, 3);
+      ctx.fillStyle = '#fff3b0'; ctx.fillRect(25, 3, 3, 4);
+      wheel(-16, 11, 5.5, spin); wheel(16, 11, 5.5, spin);
+    } else if (mode === 'train') {
+      rrPath(-37, -14, 76, 24, 9); ctx.fillStyle = col; ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.fillStyle = GLASS;
+      [-30, -19, -8, 3].forEach((x) => { rrPath(x, -9, 8, 8, 2); ctx.fill(); });
+      windowWithAvatar(21, -10, 12, 11, time);
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(-36, 3, 74, 2.5);
+      [-27, -15, 15, 27].forEach((x) => wheel(x, 11, 3.6, spin));
+    } else if (mode === 'subway' || mode === 'tram') {
+      rrPath(-31, -14, 62, 24, 9); ctx.fillStyle = col; ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.fillStyle = GLASS;
+      rrPath(-25, -10, 8, 9, 2); ctx.fill();
+      rrPath(-13, -10, 10, 16, 1.5); ctx.fill();
+      rrPath(1, -10, 10, 16, 1.5); ctx.fill();
+      windowWithAvatar(17, -10, 11, 11, time);
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(-30, 3, 60, 2.2);
+      [-20, 0, 20].forEach((x) => wheel(x, 11, 3.6, spin));
+      if (mode === 'tram') {
+        ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-9, -14); ctx.lineTo(-4, -24); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-12, -24); ctx.lineTo(4, -24); ctx.stroke();
+      }
+    } else if (mode === 'taxi') {
+      ctx.fillStyle = col; ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+      rrPath(-22, -5, 44, 14, 5); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-11, -5); ctx.lineTo(-6, -15); ctx.lineTo(9, -15); ctx.lineTo(15, -5); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.save();
+      ctx.beginPath(); ctx.moveTo(-8, -6); ctx.lineTo(-4.5, -13.5); ctx.lineTo(8, -13.5); ctx.lineTo(12.5, -6); ctx.closePath(); ctx.clip();
+      ctx.fillStyle = GLASS; ctx.fillRect(-12, -15, 28, 10);
+      drawAvatar(4, -8, 6.2, time);
+      ctx.restore();
+      ctx.fillStyle = '#fff'; rrPath(-4, -19, 8, 4, 1); ctx.fill(); ctx.strokeStyle = INK; ctx.stroke();
+      wheel(-12, 9, 4.6, spin); wheel(12, 9, 4.6, spin);
+    } else if (mode === 'ship') {
+      ctx.fillStyle = col; ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(-31, 0); ctx.lineTo(31, 0); ctx.lineTo(23, 11); ctx.lineTo(-23, 11); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff'; rrPath(-12, -11, 24, 11, 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = col; rrPath(4, -19, 7, 8, 1.5); ctx.fill(); ctx.stroke();
+      drawAvatar(-3, -12, 6.5, time);
+      ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.5;
+      for (let i = -24; i <= 24; i += 12) { ctx.beginPath(); ctx.arc(i, 15 + Math.sin(time * 4 + i) * 0.8, 5, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
+    }
+  }
+
+  function drawPlaneShape(col, outline) {
+    // 기수는 +x 방향
+    ctx.beginPath(); ctx.ellipse(0, 0, 27, 5.6, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    if (outline) { ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.stroke(); }
+    ctx.fillStyle = col;
+    [-1, 1].forEach((s) => {
+      ctx.beginPath(); ctx.moveTo(7, s * 4); ctx.lineTo(-10, s * 29); ctx.lineTo(-19, s * 29); ctx.lineTo(-9, s * 4); ctx.closePath(); ctx.fill();
+      if (outline) ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-20, s * 3); ctx.lineTo(-29, s * 12); ctx.lineTo(-33, s * 12); ctx.lineTo(-27, s * 3); ctx.closePath(); ctx.fill();
+      if (outline) ctx.stroke();
+    });
+    ctx.fillStyle = 'rgba(70,130,190,.9)';
+    ctx.beginPath(); ctx.ellipse(19, 0, 5, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawWalker(time, moving, phase) {
+    const sw = moving ? Math.sin(phase) : 0;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // 배낭
+    ctx.fillStyle = '#3c6f9e'; ctx.strokeStyle = INK; ctx.lineWidth = 1.3;
+    rrPath(-16, -14, 10, 17, 3); ctx.fill(); ctx.stroke();
+    // 다리
+    ctx.strokeStyle = '#26364a'; ctx.lineWidth = 4.5;
+    ctx.beginPath(); ctx.moveTo(-2, 3); ctx.lineTo(-2 + sw * 6, 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(3, 3); ctx.lineTo(3 - sw * 6, 14); ctx.stroke();
+    // 몸
+    ctx.fillStyle = '#e8eef4'; ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+    rrPath(-8, -15, 16, 20, 6); ctx.fill(); ctx.stroke();
+    // 팔
+    ctx.strokeStyle = '#e8eef4'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(1, -11); ctx.lineTo(1 + sw * 5, -2); ctx.stroke();
+    // 머리
+    drawAvatar(1, -25, 11, time);
+  }
+
+  // ---------- 차량 + 캐릭터 ----------
+  function drawVehicle(v, time) {
+    const col = modeColor(v.mode);
+    ctx.save();
+    ctx.translate(v.sx, v.sy);
+    if (v.mode === 'plane') {
+      ctx.save();
+      ctx.translate(7 * S, 12 * S); ctx.rotate(v.heading); ctx.scale(S * v.pop, S * v.pop);
+      ctx.globalAlpha = 0.22; ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(0, 0, 27, 5.6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.save();
+      ctx.rotate(v.heading); ctx.scale(S * v.pop, S * v.pop);
+      drawPlaneShape(col, true);
+      ctx.restore();
+      // 캐릭터 말풍선
+      const by = -36 * S * v.pop, br = 12 * S * v.pop;
+      ctx.fillStyle = '#ffffff'; ctx.strokeStyle = col; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(0, by, br + 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-4 * S, by + br + 1); ctx.lineTo(0, by + br + 8 * S); ctx.lineTo(4 * S, by + br + 1); ctx.closePath(); ctx.fillStyle = '#fff'; ctx.fill();
+      drawAvatar(0, by, br, time);
+    } else {
+      const bob = v.moving ? Math.sin(time * 16) * 0.9 * S : 0;
+      // 그림자
+      ctx.fillStyle = 'rgba(0,0,0,.22)';
+      ctx.beginPath(); ctx.ellipse(0, 14 * S, 26 * S * v.pop, 4 * S, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.translate(0, bob - 2 * S);
+      ctx.scale(v.facing * S * v.pop, S * v.pop);
+      if (v.mode === 'walk') drawWalker(time, v.moving, time * 12);
+      else drawSideVehicle(v.mode, col, time, time * 14);
+    }
+    ctx.restore();
+  }
+
+  // ---------- 지도 그리기 ----------
+  function clipSeg(x0, y0, x1, y1, xmin, ymin, xmax, ymax) {
+    let t0 = 0, t1 = 1;
+    const dx = x1 - x0, dy = y1 - y0;
+    const p = [-dx, dx, -dy, dy], q = [x0 - xmin, xmax - x0, y0 - ymin, ymax - y0];
+    for (let i = 0; i < 4; i++) {
+      if (p[i] === 0) { if (q[i] < 0) return null; }
+      else {
+        const t = q[i] / p[i];
+        if (p[i] < 0) { if (t > t1) return null; if (t > t0) t0 = t; }
+        else { if (t < t0) return null; if (t < t1) t1 = t; }
+      }
+    }
+    return [x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy];
+  }
+  function strokeLeg(leg, p, Z) {
+    const P = leg.path;
+    if (P.maxx < cam.x - W / 2 / Z - 0.001 || P.minx > cam.x + W / 2 / Z + 0.001 || P.maxy < cam.y - H / 2 / Z - 0.001 || P.miny > cam.y + H / 2 / Z + 0.001) return;
+    const e = L.pathAt(leg, p);
+    const M = 40;
+    let px = (P.xs[0] - cam.x) * Z + W / 2, py = (P.ys[0] - cam.y) * Z + H / 2;
+    let lx = null, ly = null;
+    ctx.beginPath();
+    // 확대가 크면 좌표가 너무 커지므로(점선이 수백만 개가 됨) 화면 안쪽만 잘라서 그림
+    const seg = (x1, y1) => {
+      const c = clipSeg(px, py, x1, y1, -M, -M, W + M, H + M);
+      if (c) {
+        if (lx !== c[0] || ly !== c[1]) ctx.moveTo(c[0], c[1]);
+        ctx.lineTo(c[2], c[3]); lx = c[2]; ly = c[3];
+      }
+      px = x1; py = y1;
+    };
+    for (let i = 1; i <= e.idx; i++) seg((P.xs[i] - cam.x) * Z + W / 2, (P.ys[i] - cam.y) * Z + H / 2);
+    seg((e.x - cam.x) * Z + W / 2, (e.y - cam.y) * Z + H / 2);
+    ctx.stroke();
+  }
+
+  const FONT = "'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
+
+  function drawLabels(Z, cur) {
+    const rects = [];
+    const items = [];
+    const curDay = cur.day;
+    for (const n of nodes) {
+      const sx = (n.x - cam.x) * Z + W / 2, sy = (n.y - cam.y) * Z + H / 2;
+      if (sx < -20 || sx > W + 20 || sy < hud.top - 10 || sy > H - hud.bottom + 10) continue;
+      let pr = 4;
+      if (n.key === cur.toKey) pr = 0; else if (n.key === cur.fromKey) pr = 1;
+      else if (n.days.has(curDay)) pr = 2; else if (n.visitIdx <= ctl.curIdx) pr = 3;
+      if (pr === 4) continue;
+      items.push({ n, sx, sy, pr });
+    }
+    items.sort((a, b) => a.pr - b.pr);
+    ctx.font = `600 ${Math.round(12 * S)}px ${FONT}`;
+    ctx.textBaseline = 'middle';
+    const h = 18 * S;
+    let drawn = 0;
+    for (const it of items) {
+      if (drawn >= 16) break;
+      const w = ctx.measureText(it.n.name).width + 12 * S;
+      const gap = 9 * S;
+      const cands = [
+        [it.sx + gap, it.sy - h / 2], [it.sx - gap - w, it.sy - h / 2],
+        [it.sx - w / 2, it.sy - gap - h], [it.sx - w / 2, it.sy + gap],
+      ];
+      let pos = null;
+      for (const c of cands) {
+        const [x, y] = c;
+        if (x < 4 || x + w > W - 4 || y < hud.top + 2 || y + h > H - hud.bottom - 2) continue;
+        if (rects.some((r) => x < r[0] + r[2] && x + w > r[0] && y < r[1] + r[3] && y + h > r[1])) continue;
+        pos = c; break;
+      }
+      if (!pos) continue;
+      rects.push([pos[0], pos[1], w, h]); drawn++;
+      ctx.globalAlpha = it.pr >= 4 ? 0.7 : 1;
+      rrPath(pos[0], pos[1], w, h, 6 * S); ctx.fillStyle = theme.panel; ctx.fill();
+      ctx.fillStyle = theme.ink; ctx.textAlign = 'left';
+      ctx.fillText(it.n.name, pos[0] + 6 * S, pos[1] + h / 2 + 0.5);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function draw(time, cur) {
+    const Z = Math.exp(cam.lz);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.clearRect(0, 0, W, H);
+
+    // 아직 안 간 경로 (점선)
+    ctx.setLineDash([2, 6]); ctx.lineWidth = 1.8 * S;
+    events.forEach((ev, i) => {
+      if (!ev.leg || cur.prog[i] >= 1) return;
+      ctx.strokeStyle = modeColor(ev.leg.mode); ctx.globalAlpha = 0.8;
+      strokeLeg(ev.leg, 1, Z);
+    });
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    // 지나온 경로
+    events.forEach((ev, i) => {
+      const p = cur.prog[i];
+      if (!ev.leg || p <= 0.001) return;
+      ctx.strokeStyle = theme.halo; ctx.globalAlpha = 0.85; ctx.lineWidth = 6.5 * S; strokeLeg(ev.leg, p, Z);
+      ctx.strokeStyle = modeColor(ev.leg.mode); ctx.globalAlpha = 1; ctx.lineWidth = 3.4 * S; strokeLeg(ev.leg, p, Z);
+    });
+    ctx.globalAlpha = 1;
+
+    // 장소 점
+    for (const n of nodes) {
+      const sx = (n.x - cam.x) * Z + W / 2, sy = (n.y - cam.y) * Z + H / 2;
+      if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+      const visited = n.visitIdx <= ctl.curIdx;
+      const r = (n.days.has(cur.day) ? 6.2 : 4.8) * S;
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fillStyle = visited ? theme.accent : theme.halo; ctx.fill();
+      ctx.strokeStyle = theme.ink; ctx.lineWidth = 1.6; ctx.stroke();
+    }
+    drawLabels(Z, cur);
+
+    // 캐릭터 (탈것)
+    const sx = (cur.x - cam.x) * Z + W / 2, sy = (cur.y - cam.y) * Z + H / 2;
+    if (cur.mode !== veh.mode) { veh.mode = cur.mode; veh.since = time; }
+    const pt = Math.min(1, (time - veh.since) / 0.28);
+    const pop = 0.55 + 0.45 * easeOutBack(pt);
+    const hop = cur.hop ? -Math.abs(Math.sin(cur.hop * Math.PI)) * 9 * (1 - cur.hop) * S : 0;
+    const cs = Math.cos(cur.heading);
+    if (Math.abs(cs) > 0.15) veh.facing = cs >= 0 ? 1 : -1;
+    drawVehicle({ mode: cur.mode, sx, sy: sy + hop, heading: cur.heading, facing: veh.facing, pop, moving: cur.moving }, time);
+  }
+
+  // ---------- 이벤트 도우미 ----------
+  const key = (p) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`; // 약 10m 단위로 같은 장소인지 판단
+  const fmtKm = (km) => (km >= 100 ? Math.round(km).toLocaleString('ko-KR') : km >= 10 ? km.toFixed(0) : km.toFixed(1)) + 'km';
+  const evTitle = (ev) => (ev.kind === 'move' ? `${ev.leg.from.name} → ${ev.leg.to.name}` : ev.place.name);
+  const evIcon = (ev) => (ev.kind === 'move' ? L.MODES[ev.leg.mode].emoji : '📍');
+  const evTime = (ev) => (ev.time ? (ev.endTime ? `${ev.time}~${ev.endTime}` : ev.time) : '');
+
+  function buildNodes() {
+    const map = new Map();
+    const touch = (p, day, idx) => {
+      const k = key(p);
+      let n = map.get(k);
+      if (!n) { n = { key: k, name: p.name, x: L.mx(p.lng), y: L.my(p.lat), visitIdx: Infinity, days: new Set() }; map.set(k, n); }
+      n.days.add(day);
+      if (idx < n.visitIdx) n.visitIdx = idx;
+    };
+    events.forEach((ev, i) => {
+      if (ev.kind === 'place') touch(ev.place, ev.day, i);
+      if (ev.leg) { touch(ev.leg.from, ev.day, i - 1); touch(ev.leg.to, ev.day, i); }
+    });
+    nodes = [...map.values()];
+  }
+
+  // k번째 이벤트가 끝난 뒤 캐릭터의 위치
+  function holdAfter(k) {
+    if (k < 0) {
+      const ev = events[0];
+      if (ev.kind === 'move') { const q = L.pathAt(ev.leg, 0); return { x: q.x, y: q.y, heading: q.heading, mode: 'walk' }; }
+      return { x: L.mx(ev.place.lng), y: L.my(ev.place.lat), heading: 0, mode: 'walk' };
+    }
+    const ev = events[k];
+    if (ev.kind === 'move') { const q = L.pathAt(ev.leg, 1); return { x: q.x, y: q.y, heading: q.heading, mode: ev.leg.mode }; }
+    const heading = ev.leg ? L.pathAt(ev.leg, 1).heading : 0;
+    return { x: L.mx(ev.place.lng), y: L.my(ev.place.lat), heading, mode: 'walk' };
+  }
+
+  // ---------- 이동 제어 ----------
+  const nowSec = () => performance.now() / 1000;
+  const targetIdx = () => (ctl.anim ? ctl.anim.items[ctl.anim.items.length - 1].after : ctl.curIdx);
+
+  function finishAnim() {
+    const a = ctl.anim;
+    if (!a) return;
+    ctl.curIdx = a.items[a.items.length - 1].after;
+    ctl.hold = holdAfter(ctl.curIdx);
+    ctl.anim = null;
+  }
+
+  function go(j) {
+    if (!events.length) return;
+    j = Math.max(-1, Math.min(events.length - 1, j));
+    clearTimeout(ctl.autoTimer);
+    finishAnim();
+    const cur = ctl.curIdx;
+    // 건너뛰는 '이동'이 2개 이상일 때만 빠르게 지나감. (장소 박스를 누르면 '이동+도착'이 함께 재생되는데, 이건 평소 속도로 캐릭터를 따라가며 보여줌)
+    const span = [];
+    if (j > cur) { for (let e = cur + 1; e <= j; e++) span.push(e); }
+    else if (j < cur) { for (let e = cur; e > j; e--) span.push(e); }
+    const multi = span.filter((e) => events[e].leg).length > 1;
+    const mk = (e, rev) => {
+      const ev = events[e];
+      let dur = ev.leg ? L.moveDuration(ev.leg) : 0.6;
+      if (multi) dur = ev.leg ? Math.max(0.45, Math.min(1.3, dur * 0.3)) : 0.12;
+      return { e, rev, leg: ev.leg || null, after: rev ? e - 1 : e, dur };
+    };
+    const items = [];
+    if (j > cur) { for (let e = cur + 1; e <= j; e++) items.push(mk(e, false)); }
+    else if (j < cur) { for (let e = cur; e > j; e--) items.push(mk(e, true)); }
+    else if (j >= 0) { ctl.curIdx = j - 1; ctl.hold = holdAfter(j - 1); items.push(mk(j, false)); }
+    if (!items.length) return;
+    ctl.anim = { items, i: 0, t0: nowSec() };
+    ctl.camBoost = multi ? 3 : 1;
+    const day = events[Math.max(0, j)].day;
+    if (day !== ctl.lastDay) { ctl.lastDay = day; showDayCard(day); }
+    refreshHud();
+  }
+
+  function onSettled(now) {
+    ctl.arrivedAt = now;
+    refreshHud();
+    if (ctl.autoOn) {
+      if (ctl.curIdx < events.length - 1) ctl.autoTimer = setTimeout(() => go(ctl.curIdx + 1), 900);
+      else { ctl.autoOn = false; updateAutoBtn(); }
+    }
+  }
+
+  function stepAnim(now) {
+    while (ctl.anim) {
+      const a = ctl.anim, it = a.items[a.i];
+      if (now - a.t0 < it.dur) break;
+      ctl.curIdx = it.after;
+      ctl.hold = holdAfter(it.after);
+      a.t0 += it.dur;
+      a.i++;
+      if (a.i >= a.items.length) { ctl.anim = null; onSettled(now); break; }
+    }
+  }
+
+  function currentView(now) {
+    const v = { x: 0, y: 0, heading: 0, mode: 'walk', moving: false, hop: 0, day: 1, fromKey: null, toKey: null, prog: new Array(events.length) };
+    const a = ctl.anim;
+    let it = null, p = 0;
+    if (a) { it = a.items[a.i]; p = easeIO((now - a.t0) / it.dur); }
+    for (let i = 0; i < events.length; i++) v.prog[i] = i <= ctl.curIdx ? 1 : 0;
+    if (it && it.leg) {
+      const q = L.pathAt(it.leg, it.rev ? 1 - p : p);
+      v.x = q.x; v.y = q.y; v.heading = q.heading + (it.rev ? Math.PI : 0);
+      v.mode = it.leg.mode; v.moving = true;
+      v.prog[it.e] = it.rev ? 1 - p : p;
+    } else {
+      const h = ctl.hold || holdAfter(ctl.curIdx);
+      v.x = h.x; v.y = h.y; v.heading = h.heading; v.mode = h.mode;
+      if (it) v.hop = Math.min(1, (now - a.t0) / it.dur);
+      else { const s = (now - ctl.arrivedAt) / 0.6; v.hop = s >= 0 && s < 1 ? s : 0; }
+    }
+    const t = targetIdx();
+    const fe = events[Math.max(0, t)];
+    v.day = fe.day;
+    if (fe.kind === 'move') { v.fromKey = key(fe.leg.from); v.toKey = key(fe.leg.to); }
+    else v.toKey = key(fe.place);
+    return v;
+  }
+
+  // ---------- HUD ----------
+  let dayCardTimer = null;
+  function showDayCard(day) {
+    const info = state.plan && state.plan.days[day];
+    $('#dcTitle').textContent = `${day}일차`;
+    $('#dcSub').textContent = (info && info.label) || '';
+    const c = $('#dayCard');
+    c.classList.add('show');
+    clearTimeout(dayCardTimer);
+    dayCardTimer = setTimeout(() => c.classList.remove('show'), 1900);
+  }
+
+  function refreshHud() {
+    if (!events.length) return;
+    const t = targetIdx();
+    // 캡션
+    let cap;
+    if (t < 0) cap = '아래 이벤트를 눌러 캐릭터를 이동시켜 보세요';
+    else {
+      const ev = events[t];
+      const parts = [];
+      if (ev.time) parts.push(evTime(ev));
+      parts.push(ev.kind === 'move' ? `${evIcon(ev)} ${L.MODES[ev.leg.mode].ko} · ${evTitle(ev)} · ${fmtKm(ev.leg.km)}` : `📍 ${evTitle(ev)}`);
+      cap = parts.join('  ');
+      if (ev.memo) cap += ` — ${ev.memo}`;
+    }
+    $('#caption').textContent = cap;
+    $('#legCount').textContent = `${Math.max(0, t + 1)}/${events.length}`;
+    // 보고 있는 일차 따라가기
+    if (t >= 0 && events[t].day !== state.viewDay) {
+      // 전날 밤부터 머무는 장소 박스를 눌러 이동한 경우에는 보던 일차를 유지
+      const keep = stopData && stopData.stops.some((st) => st.days.has(state.viewDay) && st.first <= t && t <= st.last);
+      if (!keep) { state.viewDay = events[t].day; buildCards(); }
+    }
+    document.querySelectorAll('#days .chip').forEach((c) => c.setAttribute('aria-current', String(Number(c.dataset.day) === state.viewDay)));
+    let cur = null;
+    const moving = !!ctl.anim; // 이동 중이면 도착 칸이 아니라 이동 표시가 '지금'
+    document.querySelectorAll('#events .ev, #events .lk').forEach((b) => {
+      const isStop = b.classList.contains('ev');
+      const first = Number(b.dataset.first), end = Number(b.dataset.idx);
+      const now = isStop ? first <= t && t <= end && !(moving && t === first && first >= 0) : moving && end === t;
+      b.setAttribute('aria-current', String(now));
+      b.classList.toggle('done', !now && (isStop ? end < t : end <= t));
+      if (now) cur = b;
+    });
+    if (cur) { const box = cur.parentElement; box.scrollTo({ left: cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2, behavior: reduceMotion ? 'auto' : 'smooth' }); }
+    document.querySelectorAll('#legList .leg').forEach((b) => b.classList.toggle('now', Number(b.dataset.idx) === t));
+  }
+
+  function makeEventLabel(ev, withTime) {
+    const t = evTime(ev);
+    return (withTime && t ? `${t}  ` : '') + `${evIcon(ev)} ${evTitle(ev)}`;
+  }
+
+  function buildDays() {
+    const box = $('#days'); box.textContent = '';
+    [...new Set(events.map((e) => e.day))].forEach((d) => {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.type = 'button'; b.dataset.day = d; b.textContent = `${d}일`;
+      b.addEventListener('click', () => { state.viewDay = d; buildCards(); refreshHud(); });
+      box.appendChild(b);
+    });
+  }
+  // ---------- 아래 박스: 장소마다 한 칸, 장소 사이에는 이동 시간 ----------
+  const toMin = (t) => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null; };
+  const fmtMin = (m) => (m < 60 ? `${m}분` : `${Math.floor(m / 60)}시간${m % 60 ? ' ' + (m % 60) + '분' : ''}`);
+  let stopData = null;
+
+  // events → 장소(stop) 목록. stop.first~last: 이 장소에 도착해서 머무는 이벤트 번호 범위(-1은 출발 전)
+  function buildStops() {
+    const stops = [], linkAfter = [];
+    let last = null;
+    const add = (p, idx, day, arr) => {
+      last = { place: p, name: p.name, key: key(p), first: idx, last: idx, arr, arrDay: day, dep: null, depDay: null, visit: '', visitEnd: '', memo: '', days: new Set([day]) };
+      stops.push(last); linkAfter.push(null);
+      return last;
+    };
+    events.forEach((ev, i) => {
+      if (ev.leg) {
+        if (!last || last.key !== key(ev.leg.from)) add(ev.leg.from, i - 1, ev.day, null);
+        const from = last;
+        from.days.add(ev.day);
+        const isMove = ev.kind === 'move';
+        if (isMove) { from.dep = ev.time || null; from.depDay = ev.day; }
+        const to = ev.kind === 'place' ? ev.place : ev.leg.to;
+        const st = add(to, i, ev.day, isMove ? ev.endTime || null : null);
+        if (!isMove) { st.visit = ev.time || ''; st.visitEnd = ev.endTime || ''; st.memo = ev.memo || ''; }
+        linkAfter[stops.length - 2] = { evIdx: i, leg: ev.leg, day: ev.day, time: isMove ? ev.time : null, endTime: isMove ? ev.endTime : null, hop: !isMove, memo: isMove ? ev.memo : '' };
+      } else if (last && last.key === key(ev.place)) {
+        last.last = i; last.days.add(ev.day);
+        if (ev.time) { last.visit = ev.time; last.visitEnd = ev.endTime || ''; }
+        if (ev.memo) last.memo = ev.memo;
+      } else {
+        const st = add(ev.place, i, ev.day, null);
+        st.visit = ev.time || ''; st.visitEnd = ev.endTime || ''; st.memo = ev.memo || '';
+      }
+    });
+    // 머무는 시간: (다음 이동 출발 시각 또는 방문 끝 시각) - (도착 시각 또는 방문 시각)
+    stops.forEach((st) => {
+      const a = toMin(st.arr) ?? toMin(st.visit);
+      const d = toMin(st.dep) ?? toMin(st.visitEnd);
+      st.stayMin = null;
+      if (a === null || d === null) return;
+      const dayGap = st.depDay !== null ? Math.max(0, st.depDay - st.arrDay) : 0;
+      let m = dayGap * 1440 + d - a;
+      let over = dayGap > 0;
+      if (m < 0 && dayGap === 0) { m += 1440; over = true; } // 자정을 넘긴 경우
+      if (m > 0) { st.stayMin = m; st.overnight = over || a + m >= 1440; }
+    });
+    stopData = { src: events, stops, linkAfter };
+  }
+
+  function linkText(lk) {
+    const M = L.MODES[lk.leg.mode];
+    const a = toMin(lk.time), b = toMin(lk.endTime);
+    let m = null;
+    if (a !== null && b !== null) { m = b - a; if (m < 0) m += 1440; }
+    const bits = [];
+    if (m) bits.push(fmtMin(m));
+    bits.push(fmtKm(lk.leg.km));
+    return { top: `${M.emoji} ${M.ko} →`, bottom: bits.join(' · ') };
+  }
+
+  function buildCards() {
+    const box = $('#events'); box.textContent = '';
+    if (!stopData || stopData.src !== events) buildStops();
+    const { stops, linkAfter } = stopData;
+    const d = state.viewDay;
+    let prevShown = -1, lastK = -1;
+    stops.forEach((st, k) => { if (st.days.has(d)) lastK = k; });
+    stops.forEach((st, k) => {
+      if (!st.days.has(d)) return;
+      const lk = prevShown === k - 1 && k > 0 ? linkAfter[k - 1] : null;
+      if (lk && lk.day === d) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'lk'; b.dataset.idx = lk.evIdx;
+        const tx = linkText(lk);
+        const m = document.createElement('span'); m.className = 'm'; m.textContent = tx.top;
+        const kk = document.createElement('span'); kk.textContent = tx.bottom;
+        b.append(m, kk);
+        if (lk.memo) b.title = lk.memo;
+        b.addEventListener('click', () => go(lk.evIdx));
+        box.appendChild(b);
+      }
+      prevShown = k;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'ev'; b.dataset.first = st.first; b.dataset.last = st.last; b.dataset.idx = st.last;
+      const t = document.createElement('span'); t.className = 't';
+      t.textContent = st.visit ? (st.visitEnd ? `${st.visit}~${st.visitEnd}` : st.visit) : st.arr ? `${st.arr} 도착` : st.first < 0 || (events[st.first] && events[st.first].day !== d) ? '출발지' : '시간 미정';
+      const n = document.createElement('span'); n.className = 'n'; n.textContent = `📍 ${st.name}`;
+      b.append(t, n);
+      if (st.stayMin) { const s2 = document.createElement('span'); s2.className = 'd'; s2.textContent = `${k === lastK ? '🌙' : '⏱'} ${fmtMin(st.stayMin)}`; b.append(s2); }
+      if (st.memo) b.title = st.memo;
+      b.addEventListener('click', () => go(st.last));
+      box.appendChild(b);
+    });
+    box.scrollLeft = 0;
+  }
+  function buildEventList() {
+    const box = $('#legList'); box.textContent = '';
+    let lastDay = null;
+    events.forEach((ev, i) => {
+      if (ev.day !== lastDay) {
+        const h = document.createElement('h4');
+        const lb = state.plan.days[ev.day] && state.plan.days[ev.day].label;
+        h.textContent = `${ev.day}일차${lb ? ' · ' + lb : ''}`;
+        box.appendChild(h); lastDay = ev.day;
+      }
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'leg'; b.dataset.idx = i;
+      b.textContent = makeEventLabel(ev, true);
+      b.addEventListener('click', () => { go(i); if (window.innerWidth < 820) closeSheet(); });
+      box.appendChild(b);
+    });
+  }
+  function showMsgs(plan) {
+    const box = $('#msgs'); box.textContent = '';
+    const add = (cls, t) => { const p = document.createElement('p'); p.className = cls; p.textContent = t; box.appendChild(p); };
+    plan.errors.forEach((m) => add('err', m));
+    plan.warnings.forEach((m) => add('warn', m));
+    if (!plan.errors.length && !plan.warnings.length) add('ok', `${plan.events.length}개 이벤트를 읽었어요.`);
+  }
+
+  // ---------- 버튼 ----------
+  $('#prev').addEventListener('click', () => go(targetIdx() - 1));
+  $('#next').addEventListener('click', () => go(targetIdx() + 1));
+  function updateAutoBtn() {
+    const b = $('#auto');
+    b.setAttribute('aria-pressed', String(ctl.autoOn));
+    b.textContent = ctl.autoOn ? '멈춤' : '자동';
+  }
+  $('#auto').addEventListener('click', () => {
+    ctl.autoOn = !ctl.autoOn;
+    updateAutoBtn();
+    if (ctl.autoOn && !ctl.anim) {
+      if (ctl.curIdx >= events.length - 1) { ctl.curIdx = -1; ctl.hold = holdAfter(-1); }
+      go(ctl.curIdx + 1);
+    } else if (!ctl.autoOn) clearTimeout(ctl.autoTimer);
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.target && /^(TEXTAREA|INPUT|SELECT)$/.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight') go(targetIdx() + 1);
+    else if (e.key === 'ArrowLeft') go(targetIdx() - 1);
+  });
+
+  // ---------- 장소 온라인 검색 (사전에 없는 장소) ----------
+  const GEO_KEY = 'tripmap:geo1';
+  const geoFail = new Set();
+  let geoRun = 0;
+  try { Object.entries(JSON.parse(store.get(GEO_KEY) || '{}')).forEach(([k, v]) => L.GEO.set(k, v)); } catch (e) { /* 캐시 무시 */ }
+  function saveGeo() { store.set(GEO_KEY, JSON.stringify(Object.fromEntries(L.GEO))); }
+
+  async function geocode(name, near) {
+    // 이미 찾은 장소들 주변을 우선 검색 (viewbox, bounded 아님)
+    let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ko&q=${encodeURIComponent(name)}`;
+    if (near) url += `&viewbox=${near.w},${near.n},${near.e},${near.s}`;
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 10000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      if (!res.ok) return null;
+      const j = await res.json();
+      if (!j[0]) return null;
+      return { lat: parseFloat(j[0].lat), lng: parseFloat(j[0].lon) };
+    } catch (e) { return null; } finally { clearTimeout(to); }
+  }
+
+  async function resolveMissing(text, names, plan) {
+    const run = ++geoRun;
+    const todo = names.filter((n) => !geoFail.has(n));
+    if (!todo.length) return;
+    const pts = plan.events.map((e) => e.place || (e.leg && e.leg.to)).filter(Boolean);
+    let near = null;
+    if (pts.length) {
+      const lats = pts.map((p) => p.lat), lngs = pts.map((p) => p.lng);
+      near = { n: Math.max(...lats) + 3, s: Math.min(...lats) - 3, w: Math.min(...lngs) - 3, e: Math.max(...lngs) + 3 };
+    }
+    const box = $('#msgs');
+    let found = 0;
+    for (let i = 0; i < todo.length; i++) {
+      if (run !== geoRun) return;
+      const p = document.createElement('p'); p.className = 'ok';
+      p.textContent = `장소 검색 중… (${i + 1}/${todo.length}) ${L.geoQuery(todo[i])}`;
+      box.appendChild(p);
+      const q = L.geoQuery(todo[i]);
+      const r = await geocode(q, near);
+      if (r) { L.GEO.set(L.norm(q), r); found++; } else geoFail.add(todo[i]);
+      if (i < todo.length - 1) await new Promise((res) => setTimeout(res, 1100)); // Nominatim 이용 규칙: 초당 1회
+    }
+    if (run !== geoRun) return;
+    if (found) { saveGeo(); if ($('#planText').value === text) applyPlan(text); }
+  }
+
+  // ---------- 계획 적용 ----------
+  function applyPlan(text) {
+    const plan = L.parsePlan(text);
+    showMsgs(plan);
+    if (plan.missing.length) resolveMissing(text, plan.missing, plan);
+    if (!plan.events.length) return false;
+    clearTimeout(ctl.autoTimer);
+    ctl.autoOn = false; updateAutoBtn();
+    state.plan = plan; events = plan.events;
+    buildNodes();
+    ctl.curIdx = -1; ctl.anim = null; ctl.hold = holdAfter(-1); ctl.arrivedAt = -10;
+    ctl.lastDay = events[0].day; state.viewDay = events[0].day;
+    invalidateFits();
+    veh.mode = null;
+    camKey = null; steerCamera(camTarget()); syncCam();
+    startRoads();
+    buildDays(); buildCards(); buildEventList(); refreshHud();
+    store.set('tripmap:plan2', text);
+    return true;
+  }
+
+  // ---------- 캐릭터 설정 ----------
+  function renderHats() {
+    const box = $('#hats'); box.textContent = '';
+    HATS.forEach((c) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'hat'; b.style.background = c;
+      b.setAttribute('aria-label', `모자 색 ${c}`); b.setAttribute('aria-pressed', String(c === char.hat));
+      b.addEventListener('click', () => { char.hat = c; renderHats(); saveChar(); });
+      box.appendChild(b);
+    });
+  }
+  function saveChar() { store.set('tripmap:char', JSON.stringify(char)); }
+  function updateTitle() { $('#title').textContent = `${char.name || '여행자'}의 여행 지도`; }
+  $('#charName').addEventListener('input', (e) => { char.name = e.target.value.slice(0, 12); updateTitle(); saveChar(); });
+
+  // ---------- 시트 ----------
+  function openSheet() { const s = $('#sheet'); s.classList.add('open'); s.removeAttribute('inert'); $('#planBtn').setAttribute('aria-expanded', 'true'); }
+  function closeSheet() { const s = $('#sheet'); s.classList.remove('open'); s.setAttribute('inert', ''); $('#planBtn').setAttribute('aria-expanded', 'false'); }
+  $('#planBtn').addEventListener('click', () => ($('#sheet').classList.contains('open') ? closeSheet() : openSheet()));
+  $('#closeSheet').addEventListener('click', closeSheet);
+  // ---------- 빠른 입력 도우미 ----------
+  (function quickBar() {
+    const ta = $('#planText');
+    const box = $('#qmodes');
+    L.MODE_ORDER.forEach((id) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'qb'; b.dataset.mode = id;
+      b.textContent = L.MODES[id].emoji; b.title = L.MODES[id].ko; b.setAttribute('aria-label', L.MODES[id].ko);
+      box.appendChild(b);
+    });
+    const tidyLine = (l) => l.trim().replace(/^[-*•·]\s+/, '');
+    const lineBounds = () => {
+      const v = ta.value, pos = ta.selectionStart;
+      const st = v.lastIndexOf('\n', pos - 1) + 1;
+      let en = v.indexOf('\n', pos); if (en < 0) en = v.length;
+      return { v, st, en };
+    };
+    const put = (v, caret) => { ta.value = v; ta.focus(); ta.setSelectionRange(caret, caret); };
+    // 커서 위쪽에서 가장 가까운 시간(범위면 끝 시간)을 다음 줄 시작 시간으로 제안
+    const prevTime = (v, upto) => {
+      const ls = v.slice(0, upto).split('\n');
+      for (let i = ls.length - 1; i >= 0; i--) {
+        const m = tidyLine(ls[i]).match(/^(\d{1,2}:\d{2})(?:\s*[~\-–—]\s*(\d{1,2}:\d{2}))?/);
+        if (m) return m[2] || m[1];
+      }
+      return '';
+    };
+    const note = (t) => {
+      const box = $('#msgs'); box.textContent = '';
+      const p = document.createElement('p'); p.className = 'ok'; p.textContent = t; box.appendChild(p);
+    };
+    // 붙여넣기: 다른 곳에서 복사한 일정을 양식에 맞게 고쳐서 넣음 (Ctrl+Shift+V는 원본 그대로)
+    let rawPaste = false;
+    ta.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'v') rawPaste = true; });
+    ta.addEventListener('paste', (e) => {
+      if (rawPaste) { rawPaste = false; return; }
+      const t = (e.clipboardData || window.clipboardData || { getData: () => '' }).getData('text');
+      if (!t) return;
+      let startDay = 0;
+      ta.value.slice(0, ta.selectionStart).split('\n').forEach((l) => {
+        const m = tidyLine(l).match(/^(?:day\s*(\d+)|(\d+)\s*일)/i); if (m) startDay = parseInt(m[1] || m[2], 10);
+      });
+      const r = L.normalizePlan(t, startDay);
+      if (!r.changed) return;
+      e.preventDefault();
+      if (!document.execCommand('insertText', false, r.text)) ta.setRangeText(r.text, ta.selectionStart, ta.selectionEnd, 'end');
+      note(`붙여넣은 내용 중 ${r.changed}줄을 양식에 맞게 고쳤어요. 원본 그대로 넣으려면 Ctrl+Z 후 Ctrl+Shift+V.`);
+    });
+    $('.qbar').addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      const { v, st, en } = lineBounds();
+      if (b.dataset.mode) {
+        const line = v.slice(st, en);
+        if (!/->|=>|→|➜|>|⇒/.test(line)) return; // 이동 줄에서만
+        const mi = line.search(/\s+\/\s+|\s+\/$/);
+        let head = mi >= 0 ? line.slice(0, mi) : line;
+        const memo = mi >= 0 ? line.slice(mi) : '';
+        head = head.replace(/\s*[:：|]\s*[^:：|>→]+$/, '').replace(/\s+$/, '');
+        const nl = `${head} : ${L.MODES[b.dataset.mode].ko}${memo}`;
+        put(v.slice(0, st) + nl + v.slice(en), st + nl.length);
+        return;
+      }
+      const q = b.dataset.q;
+      if (q === 'tidy') {
+        const r = L.normalizePlan(v, 0);
+        if (!r.changed) { note('고칠 줄이 없어요. 이미 양식에 맞아요.'); return; }
+        ta.focus(); ta.select();
+        if (!document.execCommand('insertText', false, r.text)) ta.value = r.text;
+        note(`${r.changed}줄을 양식에 맞게 고쳤어요. 되돌리려면 Ctrl+Z.`);
+        return;
+      }
+      if (q === 'day') {
+        let max = 0;
+        v.split('\n').forEach((l) => { const m = tidyLine(l).match(/^(?:day\s*(\d+)|(\d+)\s*일)/i); if (m) max = Math.max(max, parseInt(m[1] || m[2], 10)); });
+        const ins = `${v && !v.endsWith('\n') ? '\n\n' : v ? '\n' : ''}${max + 1}일차 `;
+        put(v + ins, v.length + ins.length);
+        ta.scrollTop = ta.scrollHeight;
+        return;
+      }
+      const t = prevTime(v, en);
+      const ins = q === 'move' ? `${t ? t + ' ' : ''}> ` : `${t ? t + ' ' : ''}`;
+      const nv = v.slice(0, en) + (v ? '\n' : '') + ins + v.slice(en);
+      put(nv, en + (v ? 1 : 0) + ins.length);
+    });
+  })();
+
+  function setFull(on) {
+    $('#sheet').classList.toggle('full', on);
+    const b = $('#fullSheet');
+    b.setAttribute('aria-pressed', String(on));
+    b.setAttribute('aria-label', on ? '전체화면 해제' : '전체화면');
+    b.title = b.getAttribute('aria-label');
+    b.textContent = on ? '🗗' : '⛶';
+  }
+  $('#fullSheet').addEventListener('click', () => setFull(!$('#sheet').classList.contains('full')));
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#sheet').classList.contains('full')) setFull(false); });
+  $('#applyBtn').addEventListener('click', () => {
+    const ok = applyPlan($('#planText').value);
+    if (ok && !state.plan.errors.length && !state.plan.warnings.length && window.innerWidth < 820) closeSheet();
+  });
+  $('#resetBtn').addEventListener('click', () => {
+    $('#planText').value = DEFAULT_PLAN;
+    applyPlan(DEFAULT_PLAN);
+  });
+
+  // ---------- 실제 도로 경로 (OSRM 공개 서버) ----------
+  // 도보=foot, 버스·택시·트램=car 프로필. 기차·지하철·비행기·배는 곡선 그대로.
+  const ROAD = { walk: { prof: 'foot', maxKm: 15 }, bus: { prof: 'car', maxKm: 120 }, taxi: { prof: 'car', maxKm: 120 }, tram: { prof: 'car', maxKm: 40 } };
+  const roadCache = (() => { try { return JSON.parse(store.get('tripmap:roads1') || '{}') || {}; } catch (e) { return {}; } })();
+  let roadSaveT = null;
+  function saveRoads() { clearTimeout(roadSaveT); roadSaveT = setTimeout(() => store.set('tripmap:roads1', JSON.stringify(roadCache)), 600); }
+  const roadKey = (leg) => `${ROAD[leg.mode].prof}|${leg.from.lat.toFixed(5)},${leg.from.lng.toFixed(5)}|${leg.to.lat.toFixed(5)},${leg.to.lng.toFixed(5)}`;
+  const r5 = (v) => Math.round(v * 1e5) / 1e5;
+
+  // flat: [lat, lng, lat, lng, ...] → TripLogic.pathAt이 읽는 path 형식
+  function pathFromFlat(flat) {
+    const n = flat.length / 2, N = n - 1;
+    const xs = new Float64Array(n), ys = new Float64Array(n), cum = new Float64Array(n);
+    let minx = 9, maxx = -9, miny = 9, maxy = -9;
+    for (let i = 0; i < n; i++) {
+      const x = L.mx(flat[2 * i + 1]), y = L.my(flat[2 * i]);
+      xs[i] = x; ys[i] = y;
+      if (x < minx) minx = x; if (x > maxx) maxx = x;
+      if (y < miny) miny = y; if (y > maxy) maxy = y;
+      if (i) cum[i] = cum[i - 1] + Math.hypot(x - xs[i - 1], y - ys[i - 1]);
+    }
+    return { xs, ys, cum, len: cum[N], N, minx, maxx, miny, maxy };
+  }
+
+  async function fetchRoad(leg) {
+    const a = leg.from, b = leg.to;
+    const url = `https://routing.openstreetmap.de/routed-${ROAD[leg.mode].prof}/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 25000);
+    try {
+      let res = null;
+      for (let t = 0; t < 4; t++) {
+        res = await fetch(url, { signal: ctrl.signal });
+        if (res.status !== 429 && res.status < 500) break;
+        await new Promise((r) => setTimeout(r, 1500 * (t + 1)));
+      }
+      if (!res || !res.ok) return null;
+      const j = await res.json();
+      const g = j.routes && j.routes[0] && j.routes[0].geometry && j.routes[0].geometry.coordinates;
+      if (!g || g.length < 2) return null;
+      const step = Math.max(1, Math.ceil(g.length / 500));
+      const pts = [[a.lat, a.lng]];
+      for (let i = 0; i < g.length; i += step) pts.push([g[i][1], g[i][0]]);
+      pts.push([g[g.length - 1][1], g[g.length - 1][0]], [b.lat, b.lng]);
+      let km = 0;
+      for (let i = 1; i < pts.length; i++) km += L.haversine({ lat: pts[i - 1][0], lng: pts[i - 1][1] }, { lat: pts[i][0], lng: pts[i][1] });
+      if (km > leg.km * 6 + 1) return null;
+      const flat = [];
+      pts.forEach((p) => flat.push(r5(p[0]), r5(p[1])));
+      return flat;
+    } catch (e) { return null; } finally { clearTimeout(to); }
+  }
+
+  let roadRun = 0;
+  const roadStat = { total: 0, ok: 0, fail: 0 };
+  function startRoads() {
+    const run = ++roadRun;
+    const legs = events.filter((e) => e.leg && ROAD[e.leg.mode] && e.leg.km <= ROAD[e.leg.mode].maxKm).map((e) => e.leg);
+    roadStat.total = legs.length; roadStat.ok = 0; roadStat.fail = 0;
+    let i = 0;
+    const worker = async () => {
+      while (i < legs.length && run === roadRun) {
+        const leg = legs[i++], k = roadKey(leg);
+        let flat = roadCache[k];
+        if (!flat) {
+          flat = await fetchRoad(leg);
+          if (flat) { roadCache[k] = flat; saveRoads(); }
+          await new Promise((r) => setTimeout(r, 450)); // 공개 서버 요청 제한을 피하려고 천천히
+        }
+        if (run !== roadRun) return;
+        if (flat) { leg._road = flat; roadStat.ok++; } else roadStat.fail++;
+      }
+    };
+    worker();
+  }
+  // 지금 움직이는 구간이 아닐 때만 곡선을 도로 경로로 교체 (움직이는 도중에 튀지 않게)
+  function installRoads() {
+    const active = ctl.anim ? ctl.anim.items[ctl.anim.i].leg : null;
+    for (const ev of events) {
+      const leg = ev.leg;
+      if (leg && leg._road && !leg._roadOn && leg !== active) { leg.path = pathFromFlat(leg._road); leg._roadOn = true; leg._b = null; }
+    }
+  }
+
+  // ---------- 이동 중 캐릭터를 화면 중앙에 두는 카메라 ----------
+  const FOLLOW_MIN_Z = { plane: 6, train: 10, ship: 10, subway: 13, tram: 13, bus: 13, taxi: 13, walk: 15 };
+  const follow = { leg: null, z: 0, t: 0 };
+  function followVehicle(v, t) {
+    const it = ctl.anim.items[ctl.anim.i];
+    if (follow.leg !== it.leg) {
+      follow.leg = it.leg; follow.z = map.getZoom(); follow.t = t;
+      map.stop();
+      // 경로 전체가 들어오는 줌보다 조금만 멀리서 따라감 (긴 구간도 너무 멀어지지 않게 하한을 둠)
+      const fit = map.getBoundsZoom(LF.latLngBounds(legTarget(it.leg).b), false, LF.point(32, hud.top + hud.bottom + 20));
+      const cap = it.leg.mode === 'plane' ? 16.5 : 17.5;
+      follow.goal = Math.max(FOLLOW_MIN_Z[it.leg.mode] || 10, Math.min(cap, fit - 0.4));
+    }
+    camKey = null;
+    // 목표 줌에 충분히 가까우면 딱 맞춰서 고정 (미세한 줌 변화가 계속되면 지도가 매 프레임 다시 그려져 렉이 걸림)
+    if (Math.abs(follow.goal - follow.z) < 0.02) follow.z = follow.goal;
+    else follow.z += (follow.goal - follow.z) * Math.min(1, (t - follow.t) * 3);
+    follow.t = t;
+    const ll = LF.latLng(invLat(v.y), v.x * 360 - 180);
+    // HUD를 뺀 보이는 영역의 한가운데에 오도록 보정
+    const pt = map.project(ll, follow.z).subtract([0, (hud.top - hud.bottom) / 2]);
+    follow.busy = true; // 이 프레임의 draw는 frame()이 하므로 move 이벤트의 중복 draw는 건너뜀
+    map.setView(map.unproject(pt, follow.z), follow.z, { animate: false });
+    follow.busy = false;
+  }
+
+  // ---------- 메인 루프 ----------
+  // 지도가 움직이는 즉시 오버레이도 다시 그려서 어긋나지 않게 함
+  let lastT = 0, lastCur = null;
+  map.on('move zoom', () => { if (lastCur && !follow.busy) { syncCam(); draw(lastT, lastCur); } });
+  function frame(now) {
+    const t = now / 1000;
+    if (events.length) {
+      installRoads();
+      stepAnim(t);
+      const cur = currentView(t);
+      if (cur.moving && ctl.camBoost === 1 && !reduceMotion) followVehicle(cur, t);
+      else { follow.leg = null; steerCamera(camTarget()); }
+      syncCam();
+      lastT = t; lastCur = cur;
+      draw(t, cur);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- 시작 ----------
+  try {
+    const saved = JSON.parse(store.get('tripmap:char') || 'null');
+    if (saved && typeof saved.name === 'string') { char.name = saved.name; if (HATS.includes(saved.hat)) char.hat = saved.hat; }
+  } catch (e) { /* 무시 */ }
+  $('#charName').value = char.name;
+  updateTitle(); renderHats(); updateAutoBtn();
+  closeSheet();
+  resize();
+  const savedPlan = store.get('tripmap:plan2');
+  const startText = savedPlan && savedPlan.trim() ? savedPlan : DEFAULT_PLAN;
+  $('#planText').value = startText;
+  if (!applyPlan(startText)) { $('#planText').value = DEFAULT_PLAN; applyPlan(DEFAULT_PLAN); }
+  requestAnimationFrame(frame);
+  window.__trip = { ctl, cam, map, roadStat, go, applyPlan, dims: () => ({ W, H, DPR }), events: () => events };
+})();
+
+</script>
+</body>
+</html>
