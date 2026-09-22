@@ -242,6 +242,21 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 #dcSub { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 #dcSub:empty { display: none; }
 
+/* 장소 정보 카드 */
+#placeInfo {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 7;
+  background: var(--panel-solid); border: 1px solid var(--line); border-radius: 16px;
+  width: min(340px, calc(100% - 32px)); max-height: 70vh; overflow-y: auto;
+  box-shadow: 0 14px 40px rgba(0,0,0,.28); padding: 14px;
+}
+#placeInfo[hidden] { display: none; }
+.pi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.pi-head h3 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 19px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#piImg { width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; background: var(--field); display: block; margin-bottom: 10px; }
+#piText { font-size: 13.5px; line-height: 1.6; color: var(--ink); margin: 0 0 8px; white-space: pre-line; }
+#piLink { font-size: 12.5px; font-weight: 600; color: var(--focus); text-decoration: none; }
+#piLink:hover { text-decoration: underline; }
+
 /* 시트 */
 #sheet {
   position: absolute; z-index: 6; background: var(--panel-solid); color: var(--ink);
@@ -337,6 +352,16 @@ details code { background: var(--field); padding: 1px 5px; border-radius: 4px; f
   <div id="dayCard" aria-live="polite">
     <p id="dcTitle"></p>
     <p id="dcSub"></p>
+  </div>
+
+  <div id="placeInfo" hidden aria-live="polite">
+    <div class="pi-head">
+      <h3 id="piTitle"></h3>
+      <button id="piClose" class="ibtn" type="button" aria-label="닫기">✕</button>
+    </div>
+    <img id="piImg" alt="" hidden>
+    <p id="piText"></p>
+    <a id="piLink" href="#" target="_blank" rel="noopener noreferrer" hidden>위키백과에서 더 보기 ↗</a>
   </div>
 
   <div id="hudBottom">
@@ -2027,6 +2052,93 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !searchPanel.hidden) closeSearch(); });
   document.addEventListener('pointerdown', (e) => {
     if (!searchPanel.hidden && !searchPanel.contains(e.target) && e.target !== searchBtn) closeSearch();
+  });
+
+  // ---------- 장소 정보 (위키백과 요약 + 사진) ----------
+  const WIKI_KEY = 'tripmap:wiki1';
+  const wikiCache = (() => { try { return JSON.parse(store.get(WIKI_KEY) || '{}') || {}; } catch (e) { return {}; } })();
+  function saveWiki() { store.set(WIKI_KEY, JSON.stringify(wikiCache)); }
+  async function wikiSearchTitle(lang, name) {
+    const url = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=1&srsearch=${encodeURIComponent(name)}`;
+    const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      if (!res.ok) return null;
+      const j = await res.json();
+      const hit = j.query && j.query.search && j.query.search[0];
+      return hit ? hit.title : null;
+    } catch (e) { return null; } finally { clearTimeout(to); }
+  }
+  async function wikiSummary(lang, title) {
+    const url = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+    const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      if (!res.ok) return null;
+      const j = await res.json();
+      if (j.type === 'disambiguation') return null;
+      return {
+        title: j.title, extract: j.extract || '',
+        image: (j.thumbnail && j.thumbnail.source) || (j.originalimage && j.originalimage.source) || null,
+        pageUrl: j.content_urls && j.content_urls.desktop && j.content_urls.desktop.page,
+      };
+    } catch (e) { return null; } finally { clearTimeout(to); }
+  }
+  async function fetchPlaceInfo(name) {
+    const key = L.norm(name);
+    if (Object.prototype.hasOwnProperty.call(wikiCache, key)) return wikiCache[key];
+    const qn = L.norm(name);
+    let info = null;
+    for (const lang of ['ko', 'en']) {
+      const title = await wikiSearchTitle(lang, name);
+      if (!title) continue;
+      // 검색어와 아예 상관없는 문서가 잡히는 걸 걸러냄(예: 역 이름 검색 → 엉뚱한 철도 문서)
+      const tn = L.norm(title);
+      const prefix = qn.slice(0, Math.min(2, qn.length));
+      if (prefix && !tn.includes(prefix)) continue;
+      info = await wikiSummary(lang, title);
+      if (info) break;
+    }
+    wikiCache[key] = info; saveWiki();
+    return info;
+  }
+  const placeInfo = $('#placeInfo'), piTitle = $('#piTitle'), piImg = $('#piImg'), piText = $('#piText'), piLink = $('#piLink');
+  let piRun = 0;
+  function closePlaceInfo() { placeInfo.hidden = true; }
+  async function openPlaceInfo(place) {
+    const run = ++piRun;
+    placeInfo.hidden = false;
+    piTitle.textContent = place.name;
+    piImg.hidden = true; piImg.removeAttribute('src');
+    piLink.hidden = true;
+    piText.textContent = '불러오는 중…';
+    const info = await fetchPlaceInfo(place.name);
+    if (run !== piRun || placeInfo.hidden) return; // 그 사이 닫혔거나 다른 장소를 열었으면 무시
+    if (!info || !info.extract) { piText.textContent = '이 장소에 대한 설명을 찾지 못했어요.'; return; }
+    piText.textContent = info.extract;
+    if (info.image) { piImg.src = info.image; piImg.alt = place.name; piImg.hidden = false; }
+    if (info.pageUrl) { piLink.href = info.pageUrl; piLink.hidden = false; }
+  }
+  $('#piClose').addEventListener('click', closePlaceInfo);
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !placeInfo.hidden) closePlaceInfo(); });
+  document.addEventListener('pointerdown', (e) => {
+    if (!placeInfo.hidden && !placeInfo.contains(e.target)) closePlaceInfo();
+  });
+  // 캐릭터가 멈춰서 있는 지점(도착해서 센터에 온 그 장소)을 클릭하면 정보 카드를 띄움
+  function currentPlace() {
+    if (!events.length) return null;
+    if (ctl.curIdx < 0) { const ev = events[0]; return ev.kind === 'move' ? ev.leg.from : ev.place; }
+    const ev = events[ctl.curIdx];
+    return ev.kind === 'move' ? ev.leg.to : ev.place;
+  }
+  map.on('click', (e) => {
+    if (!lastCur || ctl.anim) return; // 이동 중엔 무시
+    const Z = Math.exp(cam.lz);
+    const sx = (lastCur.x - cam.x) * Z + W / 2, sy = (lastCur.y - cam.y) * Z + H / 2;
+    const dx = e.containerPoint.x - sx, dy = e.containerPoint.y - (sy - 14 * S);
+    if (dx * dx + dy * dy > (34 * S) ** 2) return; // 캐릭터 근처를 클릭했을 때만
+    const p = currentPlace();
+    if (p) openPlaceInfo(p);
   });
 
   // ---------- 실제 도로 경로 (OSRM 공개 서버) ----------
