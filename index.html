@@ -1823,6 +1823,23 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     return (label.split(/[,/·、]/)[0] || '').trim();
   }
 
+  // 한글 이름은 지도(OSM)에 등록 안 돼 있는 경우가 많아서, 검색이 실패하면
+  // 영어로 번역해서 한 번 더 찾아본다.
+  const hasHangul = (s) => /[가-힣]/.test(s);
+  async function translateToEn(text) {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=ko|en`;
+      const res = await fetch(url, { signal: ctrl.signal });
+      if (!res.ok) return null;
+      const j = await res.json();
+      const t = j && j.responseData && j.responseData.translatedText;
+      if (!t || /no query|mymemory warning/i.test(t)) return null;
+      return t;
+    } catch (e) { return null; } finally { clearTimeout(to); }
+  }
+
   async function resolveMissing(text, names, plan) {
     const run = ++geoRun;
     const pts = plan.events.map((e) => e.place || (e.leg && e.leg.to)).filter(Boolean);
@@ -1841,6 +1858,10 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       const city = dayCity(day, plan);
       let a = city ? L.lookup(city) : null;
       if (city && !a) { await wait(); a = await geocode(city, near); if (a) L.GEO.set(L.norm(city), a); }
+      if (city && !a && hasHangul(city)) {
+        await wait(); const en = await translateToEn(city);
+        if (en) { await wait(); a = await geocode(en, near); if (a) L.GEO.set(L.norm(city), a); }
+      }
       dayAnchor.set(day, a || null);
       return a || null;
     }
@@ -1857,6 +1878,15 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       let r = null;
       if (anchor) { await wait(); r = await geocode(q, anchorBox(anchor), true); }
       if (!r) { await wait(); r = await geocode(q, near); }
+      let en = null;
+      if (!r && hasHangul(q)) { await wait(); en = await translateToEn(q); }
+      if (!r && en && L.norm(en) !== L.norm(q)) {
+        const p2 = document.createElement('p'); p2.className = 'ok';
+        p2.textContent = `영어로 번역해서 재검색 중… "${q}" → "${en}"`;
+        box.appendChild(p2);
+        if (anchor) { await wait(); r = await geocode(en, anchorBox(anchor), true); }
+        if (!r) { await wait(); r = await geocode(en, near); }
+      }
       if (r) { L.GEO.set(L.norm(q), r); found++; } else geoFail.add(names[i]);
     }
     if (run !== geoRun) return;
