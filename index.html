@@ -1860,9 +1860,14 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       if (r) { L.GEO.set(L.norm(q), r); found++; } else geoFail.add(names[i]);
     }
     if (run !== geoRun) return;
-    if (found) { saveGeo(); if ($('#planText').value === text) { applyPlan(text); return; } }
-    const stillFailed = names.filter((n) => geoFail.has(n));
-    if (stillFailed.length) renderFixRows(stillFailed, text, plan);
+    if (found) saveGeo();
+    if ($('#planText').value !== text) return; // 그 사이 다른 텍스트로 바뀌었으면 여기서 그만
+    // 이번 검색 물결이 끝났으니(성공이든 실패든) 여기서 한 번만 재생을 시작한다
+    const finalPlan = found ? L.parsePlan(text) : plan;
+    showMsgs(finalPlan);
+    if (finalPlan.events.length) buildFromPlan(finalPlan, text);
+    const stillFailed = finalPlan.missing.filter((n) => geoFail.has(n));
+    if (stillFailed.length) renderFixRows(stillFailed, text, finalPlan);
   }
 
   // 검색으로도 못 찾은 장소: 맨 아래에 이름을 보여주고 영문 주소를 직접 입력받는다
@@ -1901,11 +1906,8 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   }
 
   // ---------- 계획 적용 ----------
-  function applyPlan(text) {
-    const plan = L.parsePlan(text);
-    showMsgs(plan);
-    if (plan.missing.length) resolveMissing(text, plan.missing, plan);
-    if (!plan.events.length) return false;
+  // 지도/애니메이션을 실제로 만들어 재생하는 부분. 장소 검색이 끝난 뒤에만 호출한다.
+  function buildFromPlan(plan, text) {
     clearTimeout(ctl.autoTimer);
     ctl.autoOn = false; updateAutoBtn();
     state.plan = plan; events = plan.events;
@@ -1918,6 +1920,18 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     startRoads();
     buildDays(); buildCards(); buildEventList(); refreshHud();
     store.set('tripmap:plan2', text);
+  }
+
+  function applyPlan(text) {
+    const plan = L.parsePlan(text);
+    showMsgs(plan);
+    if (plan.missing.length) {
+      // 아직 못 찾은 장소가 있으면 검색부터 끝내고, 검색이 끝난 뒤에 재생한다(바로 재생하지 않음)
+      resolveMissing(text, plan.missing, plan);
+      return 'pending';
+    }
+    if (!plan.events.length) return false;
+    buildFromPlan(plan, text);
     return true;
   }
 
@@ -2053,7 +2067,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   $('#applyBtn').addEventListener('click', () => {
     shareLoadedNote = false;
     const ok = applyPlan($('#planText').value);
-    if (ok && !state.plan.errors.length && !state.plan.warnings.length && window.innerWidth < 820) closeSheet();
+    if (ok === true && !state.plan.errors.length && !state.plan.warnings.length && window.innerWidth < 820) closeSheet();
   });
   $('#resetBtn').addEventListener('click', () => {
     $('#planText').value = DEFAULT_PLAN;
