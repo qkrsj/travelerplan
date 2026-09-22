@@ -851,7 +851,7 @@ const TripLogic = (function () {
   }
 
   // ---------- 타임라인 ----------
-  const SLOW = 2; // 이동 시간 배율 (클수록 느려짐)
+  const SLOW = 2.4; // 이동 시간 배율 (클수록 느려짐)
   const DUR = {
     plane:  { a: 2.4,  b: 0.05, min: 3.2, max: 7 },
     train:  { a: 1.8,  b: 0.07, min: 2.4, max: 4.3 },
@@ -1535,7 +1535,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     ctl.arrivedAt = now;
     refreshHud();
     if (ctl.autoOn) {
-      if (ctl.curIdx < events.length - 1) ctl.autoTimer = setTimeout(() => go(ctl.curIdx + 1), 900);
+      if (ctl.curIdx < events.length - 1) ctl.autoTimer = setTimeout(() => go(ctl.curIdx + 1), 1800);
       else { ctl.autoOn = false; updateAutoBtn(); }
     }
   }
