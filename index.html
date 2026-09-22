@@ -144,6 +144,31 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   flex: none; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
   padding: 7px 10px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums;
 }
+.hudbtns { display: flex; gap: 6px; flex: none; pointer-events: none; }
+.hudbtns .pill-btn { pointer-events: auto; }
+
+/* 장소 검색 */
+#searchPanel {
+  position: absolute; left: 12px; right: 12px; top: var(--hudt, 60px); z-index: 5;
+  background: var(--panel-solid); border: 1px solid var(--line); border-radius: 14px;
+  padding: 10px; max-height: min(60vh, 420px); overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,.2);
+}
+#searchPanel[hidden] { display: none; }
+@media (min-width: 820px) { #searchPanel { left: 12px; right: auto; width: 340px; } }
+.srow { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; position: sticky; top: 0; background: var(--panel-solid); }
+#searchInput {
+  flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--field); padding: 8px 10px;
+}
+#searchResults { display: flex; flex-direction: column; gap: 4px; }
+#searchResults button {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; cursor: pointer;
+  border: 1px solid var(--line); background: var(--field); border-radius: 10px; padding: 8px 10px; font-size: 13px;
+}
+#searchResults button:hover { background: var(--panel); }
+.sr-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sr-when { flex: none; color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+#searchEmpty { font-size: 12.5px; color: var(--ink-2); padding: 6px 2px; margin: 0; }
 
 /* 하단 */
 #hudBottom {
@@ -290,12 +315,23 @@ details code { background: var(--field); padding: 1px 5px; border-radius: 4px; f
   <div id="hudTop">
     <div class="row">
       <h1 id="title">여행자의 여행 지도</h1>
-      <button id="planBtn" class="pill-btn" type="button" aria-expanded="false" aria-controls="sheet">계획·캐릭터</button>
+      <div class="hudbtns">
+        <button id="searchBtn" class="pill-btn" type="button" aria-expanded="false" aria-controls="searchPanel" aria-label="장소 검색" title="장소 검색">🔍</button>
+        <button id="planBtn" class="pill-btn" type="button" aria-expanded="false" aria-controls="sheet">계획·캐릭터</button>
+      </div>
     </div>
     <div class="capline">
       <div id="caption" aria-live="off"></div>
       <div id="legCount" aria-label="구간 진행"></div>
     </div>
+  </div>
+
+  <div id="searchPanel" hidden>
+    <div class="srow">
+      <input id="searchInput" type="text" placeholder="장소 검색 (예: 안필드)" autocomplete="off" aria-label="장소 검색어">
+      <button id="searchClose" class="ibtn" type="button" aria-label="검색 닫기">✕</button>
+    </div>
+    <div id="searchResults"></div>
   </div>
 
   <div id="dayCard" aria-live="polite">
@@ -1892,6 +1928,57 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   $('#resetBtn').addEventListener('click', () => {
     $('#planText').value = DEFAULT_PLAN;
     applyPlan(DEFAULT_PLAN);
+  });
+
+  // ---------- 장소 검색 (계획에 있는 장소를 검색해서 그 방문 시점으로 이동) ----------
+  const searchBtn = $('#searchBtn'), searchPanel = $('#searchPanel'), searchInput = $('#searchInput'), searchResults = $('#searchResults');
+  function stopWhenText(st) {
+    if (st.visit) return st.visitEnd ? `${st.visit}~${st.visitEnd}` : st.visit;
+    if (st.arr) return `${st.arr} 도착`;
+    return st.first < 0 ? '출발지' : '시간 미정';
+  }
+  function renderSearchResults(query) {
+    searchResults.textContent = '';
+    if (!stopData || !stopData.stops.length) {
+      const p = document.createElement('p'); p.id = 'searchEmpty'; p.textContent = '먼저 여행 계획을 적어 주세요.';
+      searchResults.appendChild(p); return;
+    }
+    const q = L.norm(query);
+    const matches = !q ? stopData.stops : stopData.stops.filter((st) => L.norm(st.name).includes(q));
+    if (!matches.length) {
+      const p = document.createElement('p'); p.id = 'searchEmpty'; p.textContent = `'${query.trim()}'에 해당하는 장소가 없어요.`;
+      searchResults.appendChild(p); return;
+    }
+    matches.forEach((st) => {
+      const b = document.createElement('button'); b.type = 'button';
+      const n = document.createElement('span'); n.className = 'sr-name'; n.textContent = `📍 ${st.name}`;
+      const w = document.createElement('span'); w.className = 'sr-when'; w.textContent = `${st.arrDay}일차 · ${stopWhenText(st)}`;
+      b.append(n, w);
+      b.addEventListener('click', () => { go(st.last); closeSearch(); });
+      searchResults.appendChild(b);
+    });
+  }
+  function openSearch() {
+    if (!stopData || stopData.src !== events) buildStops();
+    searchPanel.hidden = false;
+    searchBtn.setAttribute('aria-expanded', 'true');
+    renderSearchResults(searchInput.value);
+    requestAnimationFrame(() => searchInput.focus());
+  }
+  function closeSearch() {
+    searchPanel.hidden = true;
+    searchBtn.setAttribute('aria-expanded', 'false');
+  }
+  searchBtn.addEventListener('click', () => { if (searchPanel.hidden) openSearch(); else closeSearch(); });
+  $('#searchClose').addEventListener('click', closeSearch);
+  searchInput.addEventListener('input', () => renderSearchResults(searchInput.value));
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { const first = searchResults.querySelector('button'); if (first) first.click(); }
+    else if (e.key === 'Escape') closeSearch();
+  });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !searchPanel.hidden) closeSearch(); });
+  document.addEventListener('pointerdown', (e) => {
+    if (!searchPanel.hidden && !searchPanel.contains(e.target) && e.target !== searchBtn) closeSearch();
   });
 
   // ---------- 실제 도로 경로 (OSRM 공개 서버) ----------
