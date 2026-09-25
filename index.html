@@ -303,6 +303,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 #msgs .fixrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
 #msgs .fixrow .err { flex: 1 1 220px; }
 #msgs .fixinput { flex: 1 1 160px; min-width: 120px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); padding: 5px 8px; font-size: 12.5px; }
+#msgs .fixbox { margin: 8px 0 12px; }
+#msgs .fixresults { display: flex; flex-direction: column; gap: 4px; }
+#msgs .cand { cursor: pointer; text-align: left; border: 1px solid var(--line); background: transparent; border-radius: 8px; padding: 6px 9px; font-size: 12.5px; color: var(--ink); }
+#msgs .cand:hover, #msgs .cand:focus-visible { background: var(--field); }
+#msgs .cand strong { display: block; font-weight: 600; }
+#msgs .cand span { display: block; color: var(--ink-2); font-size: 11.5px; margin-top: 1px; }
 details { margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
 summary { cursor: pointer; font-weight: 600; }
 details p, details li { font-size: 12.5px; color: var(--ink-2); margin: 6px 0; }
@@ -410,7 +416,7 @@ details code { background: var(--field); padding: 1px 5px; border-radius: 4px; f
         <li>이동 이벤트: <code>10:15~10:45 피카딜리역 &gt; 올드 트래포드 : 트램</code></li>
         <li>바로 앞 이벤트 위치에서 출발하려면 출발지를 빼도 돼요: <code>11:00 &gt; 안필드 : 버스</code></li>
         <li>교통수단: 비행기, 기차, 지하철, 트램, 버스, 도보, 택시, 배</li>
-        <li>사전에 없는 장소는 자동으로 온라인 검색해요(인터넷 필요, 한 번 찾으면 저장돼요). 못 찾거나 엉뚱한 곳이 잡히면 주소를 직접 적어요: <code>내 숙소@Piccadilly Gardens, Manchester</code> (영문 주소가 잘 찾아져요).</li>
+        <li>사전에 없는 장소는 자동으로 온라인 검색해요(인터넷 필요, 한 번 찾으면 저장돼요). 못 찾으면 아래에 검색창과 후보 목록이 떠요. 골라서 누르기만 하면 돼요. 엉뚱한 곳이 잡히면 주소를 직접 적을 수도 있어요: <code>내 숙소@Piccadilly Gardens, Manchester</code></li>
         <li>시간과 교통수단은 빼도 돼요. 교통수단을 빼면 거리로 추정해요.</li>
         <li>시간은 <code>10:30</code>, <code>10시 30분</code>, <code>오후 3시</code>, <code>3시 반</code>, <code>10:00~11:30</code>처럼 편하게 적어요.</li>
         <li>교통수단은 <code>: 버스</code> 대신 끝에 붙여도 돼요: <code>피카딜리역 &gt; 안필드 버스</code>, <code>피카딜리역 &gt; 안필드 🚌</code></li>
@@ -538,7 +544,7 @@ const TripLogic = (function () {
 
   // 온라인 검색으로 찾은 장소 캐시 (정규화한 검색어 → {lat,lng})
   const GEO = new Map();
-  // 사용자가 영문 주소를 직접 입력해 확정한 검색어(정규화). 일차 도시와 멀어도 무시하지 않는다.
+  // 사용자가 검색 후보에서 직접 골라 확정한 검색어(정규화). 일차 도시와 멀어도 무시하지 않는다.
   const GEO_TRUSTED = new Set();
 
   // '이름@주소': 주소를 온라인 검색해서 위치를 찾는다.
@@ -1900,38 +1906,134 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     if (stillFailed.length) renderFixRows(stillFailed, text, finalPlan);
   }
 
-  // 검색으로도 못 찾은 장소: 맨 아래에 이름을 보여주고 영문 주소를 직접 입력받는다
+  // 검색으로도 못 찾은 장소: 웹 안에서 바로 다시 검색해서 후보 목록 중에 골라 확정한다.
+  // Photon(오타·부분 이름에 강함)과 Nominatim을 함께 쓰고, 한글은 영어 번역으로도 찾아본다.
+  let nomiLast = 0;
+  async function nomiSlot() { // Nominatim 이용 규칙: 초당 1회
+    const w = nomiLast + 1100 - Date.now();
+    nomiLast = Math.max(Date.now(), nomiLast + 1100);
+    if (w > 0) await new Promise((res) => setTimeout(res, w));
+  }
+  async function fetchJson(url) {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 10000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      return res.ok ? await res.json() : null;
+    } catch (e) { return null; } finally { clearTimeout(to); }
+  }
+  async function photonSearch(q, bias) {
+    let url = `https://photon.komoot.io/api/?limit=6&q=${encodeURIComponent(q)}`;
+    if (bias) url += `&lat=${bias.lat}&lon=${bias.lng}`;
+    const j = await fetchJson(url);
+    if (!j || !j.features) return [];
+    return j.features.map((f) => {
+      const p = f.properties || {};
+      const addr = [p.street && [p.street, p.housenumber].filter(Boolean).join(' '), p.district, p.city, p.state, p.country]
+        .filter((x, i, a) => x && x !== p.name && a.indexOf(x) === i).join(', ');
+      return { name: p.name || addr.split(',')[0] || q, addr, lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] };
+    });
+  }
+  async function nominatimSearch(q, bias) {
+    await nomiSlot();
+    let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=ko&q=${encodeURIComponent(q)}`;
+    if (bias) url += `&viewbox=${bias.lng - 1},${bias.lat + 1},${bias.lng + 1},${bias.lat - 1}`;
+    const j = await fetchJson(url);
+    if (!j) return [];
+    return j.map((x) => {
+      const parts = (x.display_name || '').split(', ');
+      return { name: x.name || parts[0] || q, addr: parts.slice(x.name ? 1 : 0).join(', '), lat: parseFloat(x.lat), lng: parseFloat(x.lon) };
+    });
+  }
+  async function searchCandidates(q, bias) {
+    // 각 검색 서비스가 돌려준 순서(=검색어와 잘 맞는 순)를 rank로 기억해 둔다
+    const once = async (s) => (await Promise.all([photonSearch(s, bias), nominatimSearch(s, bias)]))
+      .flatMap((l) => l.map((c, i) => Object.assign(c, { rank: i })));
+    const queries = [q];
+    let list = await once(q);
+    if (hasHangul(q)) {
+      const en = await translateToEn(q);
+      if (en && L.norm(en) !== L.norm(q)) { queries.push(en); list = list.concat(await once(en)); }
+    }
+    const qs = queries.map(L.norm);
+    const out = [];
+    list.forEach((c) => {
+      if (!isFinite(c.lat) || !isFinite(c.lng)) return;
+      if (bias) c.km = L.haversine(bias, c);
+      // 점수가 낮을수록 위로: 검색 순위 + 거리(로그라서 몇 km 차이보단 수백 km 차이가 크게 반영) - 이름 일치 보너스
+      const n = L.norm(c.name);
+      const nameBonus = qs.includes(n) ? 4 : qs.some((s) => n.includes(s) || s.includes(n)) ? 1.5 : 0;
+      c.score = c.rank + (bias ? 2 * Math.log10(1 + c.km) : 0) - nameBonus;
+      const dup = out.findIndex((o) => L.haversine(o, c) < 0.05); // 50m 안의 같은 곳은 점수 좋은 쪽 하나만
+      if (dup < 0) out.push(c);
+      else if (c.score < out[dup].score) out[dup] = c;
+    });
+    out.sort((a, b) => a.score - b.score);
+    return out.slice(0, 8);
+  }
+  function planCenter(plan) {
+    const pts = plan.events.map((e) => e.place || (e.leg && e.leg.to)).filter(Boolean);
+    if (!pts.length) return null;
+    return { lat: pts.reduce((s, p) => s + p.lat, 0) / pts.length, lng: pts.reduce((s, p) => s + p.lng, 0) / pts.length };
+  }
+
   function renderFixRows(names, text, plan) {
     if ($('#planText').value !== text) return;
     const box = $('#msgs');
     names.forEach((raw) => {
+      const wrap = document.createElement('div'); wrap.className = 'fixbox';
       const row = document.createElement('div'); row.className = 'fixrow';
       const label = document.createElement('span'); label.className = 'err';
-      label.textContent = `'${raw}'의 위치를 찾지 못했어요.`;
-      const input = document.createElement('input'); input.type = 'text'; input.className = 'fixinput';
-      input.placeholder = '영문 주소 입력 (예: Soho, London, UK)';
-      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'qb'; btn.textContent = '확인';
-      const submit = async () => {
-        const addr = input.value.trim();
-        if (!addr) return;
-        btn.disabled = true; input.disabled = true;
-        const day = plan.missingDay && plan.missingDay.get(raw);
-        const city = day ? dayCity(day, plan) : '';
-        const anchor = city ? L.lookup(city) : null;
-        const r = await geocode(addr, anchor ? anchorBox(anchor) : null);
-        if (r) {
-          const key = L.norm(L.geoQuery(raw));
-          L.GEO.set(key, r); L.GEO_TRUSTED.add(key); saveGeo(); saveGeoTrusted(); geoFail.delete(raw);
-          if ($('#planText').value === text) applyPlan(text);
-        } else {
-          btn.disabled = false; input.disabled = false;
-          label.textContent = `'${raw}'의 위치를 찾지 못했어요. 주소를 다시 확인해 주세요.`;
-        }
+      label.textContent = `'${raw}'의 위치를 찾지 못했어요. 아래에서 검색해 골라 주세요.`;
+      const input = document.createElement('input'); input.type = 'search'; input.className = 'fixinput';
+      input.value = L.geoQuery(raw);
+      input.placeholder = '장소 이름·주소로 검색 (한글도 돼요)';
+      input.setAttribute('aria-label', `'${raw}' 위치 검색`);
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'qb'; btn.textContent = '검색';
+      const results = document.createElement('div'); results.className = 'fixresults';
+      const day = plan.missingDay && plan.missingDay.get(raw);
+      const city = day ? dayCity(day, plan) : '';
+      const bias = (city && L.lookup(city)) || planCenter(plan);
+      const pick = (c) => {
+        const key = L.norm(L.geoQuery(raw));
+        L.GEO.set(key, { lat: c.lat, lng: c.lng }); L.GEO_TRUSTED.add(key); saveGeo(); saveGeoTrusted(); geoFail.delete(raw);
+        if ($('#planText').value === text) applyPlan(text);
       };
-      btn.addEventListener('click', submit);
-      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+      let seq = 0;
+      const search = async () => {
+        const q = input.value.trim();
+        if (!q) return;
+        const my = ++seq;
+        btn.disabled = true;
+        results.textContent = '';
+        const note = document.createElement('p'); note.className = 'ok'; note.textContent = `'${q}' 검색 중…`;
+        results.appendChild(note);
+        const list = await searchCandidates(q, bias);
+        if (my !== seq) return;
+        btn.disabled = false;
+        results.textContent = '';
+        if (!list.length) {
+          const p = document.createElement('p'); p.className = 'warn';
+          p.textContent = '검색 결과가 없어요. 다른 이름(현지 이름, 근처 역·거리 이름, 도시 이름을 붙이기 등)으로 검색해 보세요.';
+          results.appendChild(p);
+          return;
+        }
+        list.forEach((c) => {
+          const b = document.createElement('button'); b.type = 'button'; b.className = 'cand';
+          const n = document.createElement('strong'); n.textContent = c.name;
+          const a = document.createElement('span');
+          a.textContent = [c.addr, c.km != null ? `${city || '여행지'}에서 ${c.km < 10 ? c.km.toFixed(1) : Math.round(c.km)}km` : ''].filter(Boolean).join(' · ');
+          b.append(n, a);
+          b.addEventListener('click', () => pick(c));
+          results.appendChild(b);
+        });
+      };
+      btn.addEventListener('click', search);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
       row.append(label, input, btn);
-      box.appendChild(row);
+      wrap.append(row, results);
+      box.appendChild(wrap);
+      search(); // 처음엔 적어 둔 이름 그대로 후보를 찾아 보여준다
     });
   }
 
