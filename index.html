@@ -276,58 +276,87 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .cv-chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 .cv-chip[aria-pressed="true"] small { color: inherit; opacity: .85; }
 .cv-body { flex: 1; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
-#cvMap { flex: 1 1 58%; min-height: 0; background: var(--sea); font-family: var(--body); }
+#cvMap { flex: 1 1 62%; min-height: 0; background: #e6e2da; font-family: var(--body); }
 #cvMap .leaflet-top { top: 0; }
 #cvMap .leaflet-bottom { bottom: 0; }
-#cvList { flex: 0 0 40%; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px 14px; }
+#cvList { flex: 0 0 38%; overflow-y: auto; overscroll-behavior: contain; padding: 8px 10px 14px; }
 @media (min-width: 820px) {
   .cv-body { flex-direction: row; }
   #cvMap { flex: 1; }
-  #cvList { flex: 0 0 340px; border-left: 1px solid var(--line); }
+  #cvList { flex: 0 0 400px; border-left: 1px solid var(--line); }
 }
 .cv-listhead { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; font-size: 12.5px; color: var(--ink-2); }
 .cv-listhead strong { color: var(--ink); font-size: 14px; margin-right: auto; }
 .cv-day { display: inline-flex; align-items: center; gap: 4px; }
 .cv-day i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.cv-note { margin: 0 0 8px; font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+.cv-empty { font-size: 13px; color: var(--ink-2); padding: 10px 2px; margin: 0; line-height: 1.6; }
+
+/* 사진 카드 목록 */
+.cv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 819px) { .cv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .cv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .cv-item {
-  display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; cursor: pointer;
-  border: 1px solid var(--line); background: var(--field); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px;
+  display: flex; flex-direction: column; text-align: left; cursor: pointer; padding: 0; overflow: hidden;
+  border: 1px solid var(--line); background: var(--field); border-radius: 12px;
 }
-.cv-item:hover, .cv-item.on { background: var(--panel); border-color: var(--focus); }
-.cv-item .t { min-width: 0; }
-.cv-item b { display: block; font-size: 13.5px; }
-.cv-item .t span { display: block; font-size: 12px; color: var(--ink-2); }
+.cv-item:hover, .cv-item.on { background: var(--panel); border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
+.cv-thumb { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #dde5ee; }
+.cv-img { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.cv-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cv-img .cv-fbe { font-size: 34px; }
+.cv-thumb .cv-num { position: absolute; left: 6px; top: 6px; }
+.cv-item .t { padding: 6px 8px 8px; min-width: 0; }
+.cv-item .t b { display: block; font-size: 13px; line-height: 1.3; }
+.cv-item .t span { display: block; font-size: 11.5px; color: var(--ink-2); line-height: 1.4; margin-top: 1px; }
+
+/* 번호 뱃지 */
 .cv-num {
   flex: none; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
   color: #fff; font-weight: 700; font-size: 12.5px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45);
 }
+.cv-num.sm { width: 22px; height: 22px; font-size: 11.5px; border-width: 1.5px; }
+
+/* 지도 위 사진 핀 */
 .cv-icon { background: none; border: 0; }
 .cv-pin { position: relative; width: 100%; height: 100%; }
-.cv-lbl {
-  position: absolute; background: rgba(255,255,255,.94); color: #10283a; border: 1px solid rgba(16,40,58,.25); border-radius: 8px;
-  padding: 1px 7px; font-size: 12px; font-weight: 600; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis;
-  box-shadow: 0 1px 3px rgba(0,0,0,.25); pointer-events: none;
+.cv-pbody { position: absolute; inset: 0; transform: scale(var(--ps, 1)); transition: transform .15s; }
+.cv-card {
+  width: 100%; height: 100%; border-radius: 50%; border: 4px solid #fff; overflow: hidden; background: #dde5ee;
+  box-shadow: 0 2px 8px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center;
 }
-.cv-pin.major .cv-lbl { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; }
-.cv-pin.minor .cv-lbl, .cv-pin.ov .cv-lbl { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 5px; }
-.cv-pin.minor .cv-lbl { font-size: 11px; font-weight: 400; }
-.cv-fig { position: relative; display: block; width: 46px; height: 46px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
-.cv-fig svg { display: block; width: 100%; height: 100%; }
-.cv-fig .cv-num.sm { position: absolute; left: -7px; top: -5px; }
-.cv-fig.lst { flex: none; width: 40px; height: 40px; filter: none; }
-.cv-num.sm { width: 20px; height: 20px; font-size: 11px; border-width: 1.5px; }
-.cv-pin.minor .cv-num.sm { position: absolute; left: 0; top: 0; }
-#cvMap.nolabel .cv-pin:not(.ov) .cv-lbl, #cvMap.nominor .cv-pin.minor .cv-lbl { display: none; }
+.cv-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cv-fbe { font-size: 28px; line-height: 1; }
+.cv-pbody .cv-num { position: absolute; left: -7px; top: -5px; z-index: 1; }
+.cv-kbadge {
+  position: absolute; right: -5px; bottom: -3px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
+  border: 1px solid rgba(0,0,0,.2); display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.cv-lbl {
+  position: absolute; z-index: 2; pointer-events: none;
+  background: rgba(255,255,255,.96); color: #10283a; border: 1px solid rgba(16,40,58,.25); border-radius: 8px;
+  padding: 1px 8px; font-size: 12.5px; font-weight: 700; white-space: nowrap; max-width: 190px; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+}
+/* 핀이 --ps 배율로 줄어도 이름표가 핀 가장자리에 붙도록 간격을 같은 배율로 보정 */
+.cv-lbl, .cv-lbl[data-pos="b"] { top: 100%; left: 50%; transform: translateX(-50%); margin-top: calc(var(--ps, 1) * 32px - 32px + 3px); }
+.cv-lbl[data-pos="t"] { top: auto; bottom: 100%; left: 50%; transform: translateX(-50%); margin: 0 0 calc(var(--ps, 1) * 32px - 32px + 3px); }
+.cv-lbl[data-pos="r"] { top: 50%; left: 100%; transform: translateY(-50%); margin: 0 0 0 calc(var(--ps, 1) * 32px - 32px + 4px); }
+.cv-lbl[data-pos="l"] { top: 50%; left: auto; right: 100%; transform: translateY(-50%); margin: 0 calc(var(--ps, 1) * 32px - 32px + 4px) 0 0; }
+.cv-lbl.off { visibility: hidden; }
+
+/* 팝업 */
+.cv-pop { font-size: 12.5px; line-height: 1.5; color: #10283a; }
+.cv-pop strong { display: block; font-size: 14px; margin-bottom: 2px; }
 .cv-kind { display: inline-block; margin: 0 0 3px; padding: 0 8px; border-radius: 999px; background: rgba(16,40,58,.09); font-size: 11.5px; font-weight: 600; }
-.cv-photo { width: 100%; height: 150px; margin: 6px 0; border-radius: 8px; background: #e8eef4; object-fit: cover; display: flex; align-items: center; justify-content: center; text-align: center; color: #47617a; font-size: 12px; }
+.cv-photo { width: 100%; height: 160px; margin: 6px 0; border-radius: 8px; background: #e8eef4; object-fit: cover; display: flex; align-items: center; justify-content: center; text-align: center; color: #47617a; font-size: 12px; }
 .cv-desc { margin: 4px 0 0; font-size: 12px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .cv-desc:empty { display: none; }
 .cv-btns { display: flex; align-items: center; gap: 10px; }
-.cv-btns a { margin-top: 6px; font-size: 12px; font-weight: 600; color: #1d5fd1; text-decoration: none; }
-.cv-pop { font-size: 12.5px; line-height: 1.5; color: #10283a; }
-.cv-pop strong { display: block; font-size: 14px; margin-bottom: 2px; }
 .cv-pop button { margin-top: 6px; cursor: pointer; border: 1px solid rgba(16,40,58,.25); background: #fff; color: #10283a; border-radius: 8px; padding: 3px 9px; font-size: 12px; font-weight: 600; }
-.cv-empty { font-size: 13px; color: var(--ink-2); padding: 10px 2px; margin: 0; }
+@media (max-width: 520px) { .cv-photo { height: 110px; } .cv-desc { -webkit-line-clamp: 2; } }
+.cv-btns a { margin-top: 6px; font-size: 12px; font-weight: 600; color: #1d5fd1; text-decoration: none; }
 
 /* 시트 */
 #sheet {
@@ -2632,130 +2661,34 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     requestAnimationFrame(frame);
   }
 
-  // ---------- 도시별 지도 (나라·도시를 고르면 그 도시로 확대해서 갈 곳을 한눈에) ----------
+  // ---------- 도시별 지도 (나라·도시를 고르면 그 도시로 확대해서, 갈 만한 명소를 사진으로 한눈에) ----------
   const cityView = $('#cityView'), cvCountry = $('#cvCountry'), cvCities = $('#cvCities'), cvList = $('#cvList');
   const CITY_LINK_KM = 30; // 이 거리 안의 장소끼리는 같은 도시로 묶는다
   const REV_KEY = 'tripmap:rev1'; // 좌표 → 도시·나라 이름 (한 번 알아낸 건 저장)
   const revCache = (() => { try { return JSON.parse(store.get(REV_KEY) || '{}') || {}; } catch (e) { return {}; } })();
   const DAY_COLORS = ['#e11d48', '#0b7dc4', '#1f9e4b', '#c77700', '#7b4fd6', '#0f9d8f', '#d9508a', '#5b6b78'];
   const dayColor = (d) => DAY_COLORS[(((d - 1) % DAY_COLORS.length) + DAY_COLORS.length) % DAY_COLORS.length];
-  const cv = { clusters: [], country: '', city: null, dirty: true, run: 0, map: null, layer: null, markers: new Map(), stops: [], linkAfter: [] };
+  const cv = { clusters: [], country: '', city: null, dirty: true, run: 0, map: null, layer: null, markers: new Map(), stops: [], hidden: 0, items: [], onPhoto: null };
 
-  // 계획의 장소를 가까운 것끼리 묶어서 도시 목록을 만든다
-  function buildCityData() {
-    if (!stopData || stopData.src !== events) buildStops();
-    const { stops, linkAfter } = stopData;
-    const byKey = new Map();
-    stops.forEach((st) => {
-      let pl = byKey.get(st.key);
-      if (!pl) { pl = { key: st.key, place: st.place, name: st.name, kind: placeKind(st.name), visits: [], num: 0 }; byKey.set(st.key, pl); }
-      const v = { day: st.arrDay, when: stopWhenText(st), memo: st.memo || '' };
-      if (!pl.visits.some((x) => x.day === v.day && x.when === v.when)) pl.visits.push(v);
-    });
-    const list = [...byKey.values()];
-    const parent = list.map((_, i) => i);
-    const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
-    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
-      if (L.haversine(list[i].place, list[j].place) <= CITY_LINK_KM) parent[find(j)] = find(i);
-    }
-    const groups = new Map();
-    list.forEach((pl, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(pl); });
-    const clusters = [...groups.values()].map((places, id) => {
-      places.forEach((pl, i) => { pl.num = i + 1; });
-      const center = { lat: places.reduce((a, p) => a + p.place.lat, 0) / places.length, lng: places.reduce((a, p) => a + p.place.lng, 0) / places.length };
-      const c = { id, places, center, name: '', country: '', pending: true, keys: new Set(places.map((p) => p.key)) };
-      // 일차 옆에 적은 도시 이름(예: '2일차 리버풀, 안필드')이 실제로 이 묶음 안의 도시면 그 이름을 쓴다
-      const votes = new Map();
-      places.forEach((pl) => pl.visits.forEach((v) => {
-        const nm = L.dayCity((state.plan.days[v.day] && state.plan.days[v.day].label) || '');
-        if (nm) votes.set(nm, (votes.get(nm) || 0) + 1);
-      }));
-      c.guess = [...votes.entries()].sort((a, b) => b[1] - a[1]).map((x) => x[0]).find((nm) => {
-        const at = L.lookup(nm); return at && L.haversine(at, center) <= CITY_LINK_KM;
-      }) || '';
-      applyRev(c);
-      return c;
-    });
-    cv.clusters = clusters; cv.stops = stops; cv.linkAfter = linkAfter;
-    cv.dirty = false;
-  }
-  const revKey = (c) => `${c.center.lat.toFixed(2)},${c.center.lng.toFixed(2)}`;
-  function applyRev(c) {
-    const r = revCache[revKey(c)];
-    if (r) { c.country = r.country || ''; c.pending = false; }
-    // 지도 서비스가 준 도시 이름을 우선(일차 메모에서 뽑은 말은 '바르셀로나로'처럼 어색할 수 있음). 한글·영문이 아닌 글자뿐이면 메모의 도시 이름을 쓴다.
-    const rc = ((r && r.city) || '').replace(/^그레이터\s*/, '');
-    c.name = (/[가-힣A-Za-z]/.test(rc) && rc) || c.guess || `지역 ${c.id + 1}`;
-  }
-  // 도시·나라 이름은 좌표로 온라인 조회한다(Nominatim 규칙대로 천천히, 결과는 저장)
-  async function nameCities(run) {
-    for (const c of cv.clusters) {
-      if (run !== cv.run) return;
-      if (revCache[revKey(c)]) continue;
-      await nomiSlot();
-      const j = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=ko&lat=${c.center.lat}&lon=${c.center.lng}`);
-      if (run !== cv.run) return;
-      const a = j && j.address;
-      if (a) {
-        revCache[revKey(c)] = { city: a.city || a.town || a.village || a.municipality || a.county || a.state_district || a.state || '', country: a.country || '' };
-        store.set(REV_KEY, JSON.stringify(revCache));
-      } else c.pending = false; // 못 알아냈으면 '확인 중'은 끝내고 나라만 비워 둔다
-      applyRev(c);
-      renderCityNav();
-    }
-  }
-
-  const visibleClusters = () => cv.clusters.filter((c) => !cv.country || c.country === cv.country);
-  function renderCityNav() {
-    const countries = [...new Set(cv.clusters.map((c) => c.country))].filter(Boolean);
-    const anyPending = cv.clusters.some((c) => c.pending);
-    if (cv.country && !countries.includes(cv.country)) cv.country = '';
-    cvCountry.textContent = '';
-    const opt = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; cvCountry.appendChild(o); };
-    opt('', countries.length > 1 || anyPending ? '전체 나라' : (countries[0] || '나라 미확인'));
-    countries.forEach((n) => opt(n, `${n} (${cv.clusters.filter((c) => c.country === n).length})`));
-    cvCountry.value = cv.country;
-    cvCities.textContent = '';
-    const vis = visibleClusters();
-    const chip = (label, sub, on, fn) => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'cv-chip'; b.setAttribute('aria-pressed', String(on));
-      b.textContent = label;
-      if (sub) { const s = document.createElement('small'); s.textContent = sub; b.appendChild(s); }
-      b.addEventListener('click', fn); cvCities.appendChild(b);
-    };
-    if (vis.length > 1) chip('전체', `${vis.length}개 도시`, cv.city === null, () => selectCity(null));
-    vis.forEach((c) => chip(c.name, `${c.places.length}곳`, cv.city === c.id, () => selectCity(c.id)));
-    const sel = cv.city === null ? null : cv.clusters.find((c) => c.id === cv.city);
-    if (sel && cv.title) cv.title.textContent = cityTitle(sel);
-  }
-  const cityTitle = (c) => `${c.name}${c.country ? ' · ' + c.country : ''} — ${c.places.length}곳`;
-  function selectCity(id) {
-    cv.city = id;
-    renderCityNav();
-    renderCityMap();
-  }
-
-  // ---------- 장소 종류 → 캐릭터 일러스트 ----------
-  // 이름에서 종류를 짐작한다. 역·공항·숙소·식당은 작은 점(minor), 나머지 명소는 큰 캐릭터(major)로 보여준다.
-  const svgWrap = (inner) => `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><g stroke="#1d2b38" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`;
-  const face = (x, y, s = 1) => `<circle cx="${x - 4 * s}" cy="${y}" r="${1.5 * s}" fill="#1d2b38" stroke="none"/><circle cx="${x + 4 * s}" cy="${y}" r="${1.5 * s}" fill="#1d2b38" stroke="none"/><path d="M${x - 3 * s} ${y + 3.5 * s} Q${x} ${y + 6.5 * s} ${x + 3 * s} ${y + 3.5 * s}" fill="none" stroke-width="1.5"/><circle cx="${x - 7 * s}" cy="${y + 3 * s}" r="${1.7 * s}" fill="#ff8fa3" stroke="none" opacity=".7"/><circle cx="${x + 7 * s}" cy="${y + 3 * s}" r="${1.7 * s}" fill="#ff8fa3" stroke="none" opacity=".7"/>`;
+  // ---------- 장소 종류 ----------
+  // 이름에서 종류를 짐작한다. hidden인 종류(공항·역·숙소·식당)는 도시 지도에 올리지 않는다.
   const KINDS = {
-    museum: { ko: '박물관·미술관', major: true, svg: svgWrap(`<path d="M4 20 L24 6 L44 20 Z" fill="#e07a5f"/><rect x="7" y="20" width="34" height="18" fill="#f6ead0"/><rect x="9" y="20" width="4" height="18" fill="#fff"/><rect x="35" y="20" width="4" height="18" fill="#fff"/><rect x="4" y="38" width="40" height="5" rx="1" fill="#d9c9a3"/>${face(24, 28)}`) },
-    castle: { ko: '궁전·성', major: true, svg: svgWrap(`<rect x="5" y="17" width="9" height="25" fill="#c9c1af"/><rect x="34" y="17" width="9" height="25" fill="#c9c1af"/><rect x="14" y="25" width="20" height="17" fill="#ddd6c6"/><path d="M3 17 L9.5 5 L16 17 Z" fill="#e07a5f"/><path d="M32 17 L38.5 5 L45 17 Z" fill="#e07a5f"/><rect x="3" y="42" width="42" height="3" rx="1" fill="#b5ad9b"/>${face(24, 32)}`) },
-    stadium: { ko: '경기장', major: true, svg: svgWrap(`<path d="M6 25 V9 M42 25 V9" fill="none"/><rect x="3" y="5" width="7" height="5" fill="#ffe08a"/><rect x="38" y="5" width="7" height="5" fill="#ffe08a"/><ellipse cx="24" cy="30" rx="21" ry="13" fill="#cfd8e3"/><ellipse cx="24" cy="30" rx="15" ry="8.5" fill="#5fb85f"/>${face(24, 28)}`) },
-    tower: { ko: '타워·전망대', major: true, svg: svgWrap(`<path d="M24 2 L16 13 H32 Z" fill="#6b8fb5"/><rect x="16" y="13" width="16" height="30" fill="#e3c98f"/><circle cx="24" cy="20" r="5" fill="#fff"/><path d="M24 20 V16.5 M24 20 L26.5 21.5" fill="none" stroke-width="1.4"/><rect x="13" y="43" width="22" height="4" rx="1" fill="#b89a5c"/>${face(24, 32, 0.9)}`) },
-    bridge: { ko: '다리', major: true, svg: svgWrap(`<rect x="9" y="10" width="7" height="30" fill="#8fb3d9"/><rect x="32" y="10" width="7" height="30" fill="#8fb3d9"/><path d="M12.5 10 Q24 24 35.5 10" fill="none"/><rect x="2" y="34" width="44" height="6" rx="1.5" fill="#c98a5b"/><path d="M2 45 q4 -3 8 0 t8 0 t8 0 t8 0 t8 0 t4 0" fill="none" stroke="#4c8dff"/>${face(24, 22, 0.9)}`) },
-    church: { ko: '성당·사원', major: true, svg: svgWrap(`<path d="M24 2 L19 11 H29 Z" fill="#6b7fa8"/><rect x="19" y="11" width="10" height="13" fill="#efe3cf"/><rect x="8" y="24" width="32" height="19" fill="#efe3cf"/><path d="M22.5 43 V38 Q24 35 25.5 38 V43" fill="#c9b48f"/>${face(24, 29)}`) },
-    park: { ko: '공원·자연', major: true, svg: svgWrap(`<ellipse cx="24" cy="44" rx="16" ry="3" fill="#8bcf7d"/><rect x="21" y="33" width="6" height="11" fill="#8b5a2b"/><circle cx="15" cy="25" r="10" fill="#5fb85f"/><circle cx="33" cy="25" r="10" fill="#5fb85f"/><circle cx="24" cy="18" r="12" fill="#6cc070"/><circle cx="15" cy="25" r="9.2" fill="#5fb85f" stroke="none"/><circle cx="33" cy="25" r="9.2" fill="#5fb85f" stroke="none"/><circle cx="24" cy="18" r="11.2" fill="#6cc070" stroke="none"/>${face(24, 21)}`) },
-    market: { ko: '시장·거리', major: true, svg: svgWrap(`<rect x="7" y="22" width="34" height="20" fill="#f0c987"/><rect x="6" y="10" width="36" height="12" fill="#fff"/><rect x="6" y="10" width="6" height="12" fill="#e5484d" stroke="none"/><rect x="18" y="10" width="6" height="12" fill="#e5484d" stroke="none"/><rect x="30" y="10" width="6" height="12" fill="#e5484d" stroke="none"/><rect x="6" y="10" width="36" height="12" fill="none"/>${face(24, 31, 0.95)}`) },
-    square: { ko: '광장', major: true, svg: svgWrap(`<ellipse cx="24" cy="38" rx="20" ry="7" fill="#cfd8e3"/><ellipse cx="24" cy="36" rx="16" ry="4.5" fill="#8fd0ff"/><path d="M24 20 V6 M24 20 Q14 8 10 21 M24 20 Q34 8 38 21" fill="none" stroke="#4c8dff"/><rect x="19" y="20" width="10" height="16" fill="#cfd8e3"/>${face(24, 27, 0.7)}`) },
-    studio: { ko: '스튜디오·공연', major: true, svg: svgWrap(`<rect x="6" y="18" width="36" height="24" rx="2" fill="#ffd166"/><rect x="6" y="10" width="36" height="8" fill="#1d2b38"/><path d="M10 10 h5 l-4 8 h-5 z M22 10 h5 l-4 8 h-5 z M34 10 h5 l-4 8 h-5 z" fill="#fff" stroke="none"/>${face(24, 30)}`) },
-    wheel: { ko: '관람차', major: true, svg: svgWrap(`<path d="M14 45 L24 26 L34 45" fill="none"/><circle cx="24" cy="22" r="16" fill="#d8ecff"/><path d="M24 6 V38 M8 22 H40 M12.7 10.7 L35.3 33.3 M35.3 10.7 L12.7 33.3" fill="none" stroke-width="1"/><g fill="#ff8fa3" stroke-width="1.2"><circle cx="24" cy="6" r="2.2"/><circle cx="24" cy="38" r="2.2"/><circle cx="8" cy="22" r="2.2"/><circle cx="40" cy="22" r="2.2"/><circle cx="12.7" cy="10.7" r="2.2"/><circle cx="35.3" cy="33.3" r="2.2"/><circle cx="35.3" cy="10.7" r="2.2"/><circle cx="12.7" cy="33.3" r="2.2"/></g><circle cx="24" cy="22" r="8" fill="#fff"/>${face(24, 20, 0.75)}`) },
-    landmark: { ko: '명소', major: true, svg: svgWrap(`<path d="M24 3 L30 12 L29 40 H19 L18 12 Z" fill="#dfe6ee"/><rect x="14" y="40" width="20" height="6" rx="1" fill="#b8c4d2"/>${face(24, 26, 0.85)}`) },
-    station: { ko: '역·정류장', major: false, emoji: '🚉' },
-    airport: { ko: '공항', major: false, emoji: '✈️' },
-    hotel: { ko: '숙소', major: false, emoji: '🏨' },
-    food: { ko: '식당·카페', major: false, emoji: '🍴' },
+    museum: { ko: '박물관·미술관', emoji: '🏛️', color: '#c8553d' },
+    church: { ko: '성당·사원', emoji: '⛪', color: '#5b6fa6' },
+    stadium: { ko: '경기장', emoji: '🏟️', color: '#2f9e57' },
+    bridge: { ko: '다리', emoji: '🌉', color: '#b5763f' },
+    wheel: { ko: '관람차', emoji: '🎡', color: '#d9508a' },
+    castle: { ko: '궁전·성', emoji: '🏰', color: '#7b6fb5' },
+    tower: { ko: '타워·전망대', emoji: '🗼', color: '#2f7de1' },
+    studio: { ko: '스튜디오·공연', emoji: '🎬', color: '#c98f00' },
+    square: { ko: '광장', emoji: '⛲', color: '#0f9d8f' },
+    market: { ko: '시장·거리', emoji: '🛍️', color: '#d63c40' },
+    park: { ko: '공원·자연', emoji: '🌳', color: '#3a9a5b' },
+    landmark: { ko: '명소', emoji: '📍', color: '#5b6b78' },
+    station: { ko: '역·정류장', hidden: true },
+    airport: { ko: '공항', hidden: true },
+    hotel: { ko: '숙소', hidden: true },
+    food: { ko: '식당·카페', hidden: true },
   };
   // 앞에서부터 맞는 첫 종류를 쓴다(역·공항·숙소·식당을 먼저 가려내야 '박물관역'이 박물관이 되지 않는다)
   const KIND_RULES = [
@@ -2781,6 +2714,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     for (const [id, re] of KIND_RULES) if (re.test(n)) return id;
     return 'landmark';
   }
+  const isSight = (pl) => !KINDS[pl.kind].hidden;
 
   // ---------- 장소 실제 사진 ----------
   // 위키백과 문서의 대표 사진을 쓰고, 이름으로 못 찾으면 그 좌표 근처 문서의 사진을 쓴다.
@@ -2811,39 +2745,188 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     if (!near) return info;
     return info ? Object.assign({}, info, { image: near.image }) : near;
   }
+  // 위키미디어 썸네일 주소의 폭을 키워 큰 사진을 얻는다(안 되면 원래 주소로 되돌림)
+  const bigPhoto = (u) => (/upload\.wikimedia\.org\/.*\/thumb\//.test(u) ? u.replace(/\/\d{2,4}px-/, '/500px-') : u);
+  // 사진을 받아 pl.photo에 넣는다(동시에 3개씩). 받을 때마다 onDone(pl) 호출
+  async function ensurePhotos(places, onDone) {
+    const q = places.filter((p) => p.photo === undefined);
+    let i = 0;
+    const worker = async () => {
+      while (i < q.length) {
+        const pl = q[i++];
+        let info = null;
+        try { info = await getPlacePhoto(pl.place); } catch (e) { /* 사진 없이 진행 */ }
+        pl.info = info; pl.photo = (info && info.image) || null;
+        onDone(pl);
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+  }
 
-  function pinIcon(num, color, name, kindId) {
-    const K = KINDS[kindId];
-    const el = document.createElement('div');
-    const l = document.createElement('span'); l.className = 'cv-lbl';
-    const n = document.createElement('span'); n.className = 'cv-num'; n.textContent = num; n.style.background = color;
-    if (K && K.major) {
-      el.className = 'cv-pin major';
-      const fig = document.createElement('span'); fig.className = 'cv-fig'; fig.innerHTML = K.svg;
-      n.classList.add('sm'); fig.appendChild(n);
-      l.textContent = name; el.append(fig, l);
-      return LF.divIcon({ html: el, className: 'cv-icon', iconSize: [46, 46], iconAnchor: [23, 23] });
+  // ---------- 장소를 가까운 것끼리 묶어 도시 목록 만들기 ----------
+  function buildCityData() {
+    if (!stopData || stopData.src !== events) buildStops();
+    const { stops } = stopData;
+    const byKey = new Map();
+    stops.forEach((st) => {
+      let pl = byKey.get(st.key);
+      if (!pl) { pl = { key: st.key, place: st.place, name: st.name, kind: placeKind(st.name), visits: [], num: 0, photo: undefined, info: undefined }; byKey.set(st.key, pl); }
+      const v = { day: st.arrDay, when: stopWhenText(st), memo: st.memo || '' };
+      if (!pl.visits.some((x) => x.day === v.day && x.when === v.when)) pl.visits.push(v);
+    });
+    const all = [...byKey.values()];
+    const list = all.filter(isSight); // 공항·역·숙소·식당은 뺀다
+    cv.hidden = all.length - list.length;
+    cv.sightKeys = new Set(list.map((p) => p.key));
+    const parent = list.map((_, i) => i);
+    const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      if (L.haversine(list[i].place, list[j].place) <= CITY_LINK_KM) parent[find(j)] = find(i);
     }
-    if (K) { el.className = 'cv-pin minor'; n.classList.add('sm'); l.textContent = `${K.emoji} ${name}`; } // 역·공항·숙소·식당
-    else { el.className = 'cv-pin ov'; l.textContent = name; }                                             // 도시 전체 보기의 도시 핀
-    el.append(n, l);
-    const sz = K ? 20 : 26;
-    return LF.divIcon({ html: el, className: 'cv-icon', iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2] });
+    const groups = new Map();
+    list.forEach((pl, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(pl); });
+    cv.clusters = [...groups.values()].map((places, id) => {
+      places.forEach((pl, i) => { pl.num = i + 1; });
+      const center = { lat: places.reduce((a, p) => a + p.place.lat, 0) / places.length, lng: places.reduce((a, p) => a + p.place.lng, 0) / places.length };
+      const c = { id, places, center, name: '', country: '', pending: true, byKey: new Map(places.map((p) => [p.key, p])) };
+      // 일차 제목('4일차 런던 웨스트민스터', '출국, 맨체스터 도착')의 단어 중 사전에 있는 도시 이름이면서 이 묶음 안에 있는 것을 도시 이름 후보로 쓴다(많이 나온 순)
+      const votes = new Map();
+      places.forEach((pl) => pl.visits.forEach((v) => {
+        const raw = String((state.plan.days[v.day] && state.plan.days[v.day].label) || '')
+          .replace(/\([^)]*\)/g, ' ').replace(/(?:\d{1,4}\s*[/.\-년월]\s*){1,2}\d{1,2}\s*일?/g, ' ').replace(/[~～]/g, ' ');
+        raw.split(/[,/·、+→>\s]+/).forEach((tk) => { if (/[가-힣A-Za-z]/.test(tk)) votes.set(tk, (votes.get(tk) || 0) + 1); });
+      }));
+      c.guess = [...votes.entries()].sort((a, b) => b[1] - a[1]).map((x) => x[0]).find((nm) => {
+        if (!L.PLACES.some((q) => q.aliases.includes(L.norm(nm))) || placeKind(nm) !== 'landmark') return false; // 사전의 도시 이름 그대로일 때만
+        const at = L.lookup(nm); return at && L.haversine(at, center) <= CITY_LINK_KM;
+      }) || '';
+      applyRev(c);
+      return c;
+    });
+    cv.stops = stops;
+    cv.dirty = false;
   }
-  // 목록 왼쪽 그림: 큰 명소는 캐릭터, 그 외는 번호 뱃지
-  function listFig(pl) {
-    const K = KINDS[pl.kind];
-    const n = document.createElement('span'); n.className = 'cv-num'; n.textContent = pl.num; n.style.background = dayColor(pl.visits[0].day);
-    if (!K.major) return n;
-    const fig = document.createElement('span'); fig.className = 'cv-fig lst'; fig.innerHTML = K.svg;
-    n.classList.add('sm'); fig.appendChild(n);
-    return fig;
+  const revKey = (c) => `${c.center.lat.toFixed(2)},${c.center.lng.toFixed(2)}`;
+  function applyRev(c) {
+    const r = revCache[revKey(c)];
+    if (r) { c.country = r.country || ''; c.pending = false; }
+    const rc = ((r && r.city) || '').replace(/^그레이터\s*/, '');
+    // 계획에 적은 도시 이름이 있으면 그걸 쓰고, 없으면 지도 서비스가 준 이름을 쓴다
+    c.name = c.guess || (/[가-힣A-Za-z]/.test(rc) && rc) || `지역 ${c.id + 1}`;
   }
+  // 도시·나라 이름은 좌표로 온라인 조회한다(Nominatim 규칙대로 천천히, 결과는 저장)
+  async function nameCities(run) {
+    for (const c of cv.clusters) {
+      if (run !== cv.run) return;
+      if (revCache[revKey(c)]) continue;
+      await nomiSlot();
+      const j = await fetchJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=ko&lat=${c.center.lat}&lon=${c.center.lng}`);
+      if (run !== cv.run) return;
+      const a = j && j.address;
+      if (a) {
+        revCache[revKey(c)] = { city: a.city || a.town || a.village || a.municipality || a.county || a.state_district || a.state || '', country: a.country || '' };
+        store.set(REV_KEY, JSON.stringify(revCache));
+      } else c.pending = false; // 못 알아냈으면 '확인 중'은 끝내고 나라만 비워 둔다
+      applyRev(c);
+      renderCityNav();
+    }
+  }
+
+  // ---------- 위쪽 나라·도시 선택 ----------
+  const visibleClusters = () => cv.clusters.filter((c) => !cv.country || c.country === cv.country);
+  const cityTitle = (c) => `${c.name}${c.country ? ' · ' + c.country : ''} — 볼거리 ${c.places.length}곳`;
+  function renderCityNav() {
+    const countries = [...new Set(cv.clusters.map((c) => c.country))].filter(Boolean);
+    const anyPending = cv.clusters.some((c) => c.pending);
+    if (cv.country && !countries.includes(cv.country)) cv.country = '';
+    cvCountry.textContent = '';
+    const opt = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; cvCountry.appendChild(o); };
+    opt('', countries.length > 1 || anyPending ? '전체 나라' : (countries[0] || '나라 미확인'));
+    countries.forEach((n) => opt(n, `${n} (${cv.clusters.filter((c) => c.country === n).length})`));
+    cvCountry.value = cv.country;
+    cvCities.textContent = '';
+    const vis = visibleClusters();
+    const chip = (label, sub, on, fn) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'cv-chip'; b.setAttribute('aria-pressed', String(on));
+      b.textContent = label;
+      if (sub) { const s = document.createElement('small'); s.textContent = sub; b.appendChild(s); }
+      b.addEventListener('click', fn); cvCities.appendChild(b);
+    };
+    if (vis.length > 1) chip('전체', `${vis.length}개 도시`, cv.city === null, () => selectCity(null));
+    vis.forEach((c) => chip(c.name, `${c.places.length}곳`, cv.city === c.id, () => selectCity(c.id)));
+    const sel = cv.city === null ? null : cv.clusters.find((c) => c.id === cv.city);
+    if (sel && cv.title) cv.title.textContent = cityTitle(sel);
+  }
+  function selectCity(id) {
+    cv.city = id;
+    renderCityNav();
+    renderCityMap();
+  }
+
+  // ---------- 핀·카드 그림: 실제 사진(없으면 종류 색 + 이모지) ----------
+  function fillPhoto(box, name, photo, K) {
+    box.textContent = '';
+    box.style.background = photo ? '' : K.color;
+    if (photo) {
+      const img = document.createElement('img'); img.alt = name; img.decoding = 'async';
+      img.addEventListener('error', () => fillPhoto(box, name, null, K));
+      img.src = photo; box.appendChild(img);
+    } else {
+      const e = document.createElement('span'); e.className = 'cv-fbe'; e.textContent = K.emoji; box.appendChild(e);
+    }
+  }
+  const PIN = 64;
+  // o: { num, color, name, K:{emoji,color}, photo, badge }
+  function makePin(o) {
+    const el = document.createElement('div'); el.className = 'cv-pin';
+    const body = document.createElement('div'); body.className = 'cv-pbody';
+    const card = document.createElement('div'); card.className = 'cv-card'; card.style.borderColor = o.color;
+    fillPhoto(card, o.name, o.photo, o.K);
+    const n = document.createElement('span'); n.className = 'cv-num sm'; n.textContent = o.num; n.style.background = o.color;
+    body.append(card, n);
+    if (o.badge) { const kb = document.createElement('span'); kb.className = 'cv-kbadge'; kb.textContent = o.badge; body.appendChild(kb); }
+    const l = document.createElement('span'); l.className = 'cv-lbl'; l.textContent = o.name;
+    el.append(body, l);
+    return LF.divIcon({ html: el, className: 'cv-icon', iconSize: [PIN, PIN], iconAnchor: [PIN / 2, PIN / 2] });
+  }
+  const placeIcon = (pl) => makePin({ num: pl.num, color: dayColor(pl.visits[0].day), name: pl.name, K: KINDS[pl.kind], photo: pl.photo, badge: KINDS[pl.kind].emoji });
+  const cityIcon = (c) => makePin({ num: c.places.length, color: theme.accent, name: c.name, K: KINDS.landmark, photo: c.places[0].photo });
+
+  // 핀 배율: 좁은 화면이거나 멀리서 볼수록 작게
+  const pinScale = () => (window.innerWidth <= 520 ? 0.8 : 1) * (cv.map && cv.map.getZoom() < 12.5 ? 0.7 : 1);
+  // 이름표는 핀의 아래·위·오른쪽·왼쪽 중 다른 이름표·핀과 안 겹치는 자리에 놓는다(어디에도 못 놓으면 감춤, 가까이 확대하면 다 보임)
+  const rectHit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  function declutter() {
+    if (!cv.map) return;
+    const s = pinScale(), half = (PIN / 2) * s;
+    const gv = half + 3, gh = half + 4; // 핀 중심에서 이름표까지 거리(CSS의 margin과 맞춘 값)
+    const pts = cv.items.map((it) => { const m = cv.markers.get(it.key); return m && { m, p: cv.map.latLngToContainerPoint(m.getLatLng()) }; }).filter(Boolean);
+    const pinRects = pts.map(({ p }) => ({ x: p.x - half, y: p.y - half, w: half * 2, h: half * 2 }));
+    const placed = [];
+    pts.forEach(({ m, p }, i) => {
+      const el = m.getElement(), lbl = el && el.querySelector('.cv-lbl');
+      if (!lbl) return;
+      const w = lbl.offsetWidth, h = lbl.offsetHeight;
+      const spots = [
+        ['b', { x: p.x - w / 2, y: p.y + gv, w, h }],
+        ['t', { x: p.x - w / 2, y: p.y - gv - h, w, h }],
+        ['r', { x: p.x + gh, y: p.y - h / 2, w, h }],
+        ['l', { x: p.x - gh - w, y: p.y - h / 2, w, h }],
+      ];
+      const ok = spots.find(([, r]) => !placed.some((q) => rectHit(q, r)) && !pinRects.some((q, j) => j !== i && rectHit(q, r)));
+      lbl.classList.toggle('off', !ok);
+      if (ok) { lbl.dataset.pos = ok[0]; placed.push(ok[1]); }
+    });
+  }
+  let declutterT = null;
+  const declutterSoon = () => { clearTimeout(declutterT); declutterT = setTimeout(declutter, 60); };
+
+  // ---------- 팝업: 큰 사진 + 설명 ----------
   function popupFor(pl, layer) {
     const K = KINDS[pl.kind];
     const box = document.createElement('div'); box.className = 'cv-pop';
     const h = document.createElement('strong'); h.textContent = `${pl.num}. ${pl.name}`; box.appendChild(h);
-    const kd = document.createElement('div'); kd.className = 'cv-kind'; kd.textContent = K.ko; box.appendChild(kd);
+    const kd = document.createElement('div'); kd.className = 'cv-kind'; kd.textContent = `${K.emoji} ${K.ko}`; box.appendChild(kd);
     pl.visits.forEach((v) => {
       const p = document.createElement('div'); p.textContent = `${v.day}일차 · ${v.when}${v.memo ? ` — ${v.memo}` : ''}`; box.appendChild(p);
     });
@@ -2854,12 +2937,16 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     more.addEventListener('click', () => openPlaceInfo(pl.place));
     row.appendChild(more); box.appendChild(row);
     const refresh = () => { const pop = layer && layer.getPopup && layer.getPopup(); if (pop && pop.isOpen()) pop.update(); };
-    getPlacePhoto(pl.place).then((info) => {
+    const show = (info) => {
       if (info && info.image) {
         const img = document.createElement('img'); img.className = 'cv-photo'; img.alt = `${pl.name} 사진`; img.loading = 'lazy';
+        let triedOrig = false;
         img.addEventListener('load', refresh);
-        img.addEventListener('error', () => { photo.textContent = '사진을 불러오지 못했어요.'; img.replaceWith(photo); refresh(); });
-        img.src = info.image;
+        img.addEventListener('error', () => {
+          if (!triedOrig && img.src !== info.image) { triedOrig = true; img.src = info.image; return; }
+          photo.textContent = '사진을 불러오지 못했어요.'; img.replaceWith(photo); refresh();
+        });
+        img.src = bigPhoto(info.image);
         photo.replaceWith(img);
       } else photo.textContent = '이 장소의 사진을 찾지 못했어요.';
       if (info && info.extract) txt.textContent = info.extract;
@@ -2868,24 +2955,46 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
         row.appendChild(a);
       }
       refresh();
-    }).catch(() => { photo.textContent = '이 장소의 사진을 찾지 못했어요.'; });
+    };
+    (pl.info !== undefined ? Promise.resolve(pl.info) : getPlacePhoto(pl.place)).then(show).catch(() => { photo.textContent = '이 장소의 사진을 찾지 못했어요.'; });
     return box;
+  }
+
+  // ---------- 지도 ----------
+  const OFM_LIGHT = 'https://tiles.openfreemap.org/styles/positron'; // 밝고 깔끔한 벡터 지도: 어떤 화면 배율에서도 선명하고 핀이 잘 보인다
+  async function cityVector() {
+    if (!LF.maplibreGL) return;
+    const style = await (await fetch(OFM_LIGHT)).json();
+    style.layers.forEach((ly) => {
+      const tf = ly.layout && ly.layout['text-field'];
+      if (tf && JSON.stringify(tf).includes('name')) ly.layout['text-field'] = ENGLISH;
+    });
+    const layer = LF.maplibreGL({ style, attribution: OFM_ATTR, padding: 0.15 });
+    layer.addTo(cv.map); // OSM 지도 위에 얹어서 불러온다. 다 준비되면 OSM을 걷어낸다
+    layer.getMaplibreMap().on('load', () => {
+      if (!cv.map.hasLayer(layer)) return;
+      if (cv.base) cv.map.removeLayer(cv.base);
+      cv.base = layer;
+    });
+    setTimeout(() => { if (cv.base !== layer) cv.map.removeLayer(layer); }, 25000);
   }
   function ensureCityMap() {
     if (cv.map) return;
     cv.map = LF.map('cvMap', { zoomSnap: 0.25, minZoom: 2, maxZoom: 19 });
-    LF.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: OSM_ATTR }).addTo(cv.map);
+    // 벡터 지도가 준비되는 동안(안 될 때는 계속) 보이는 OSM 지도: 고해상도 화면에서는 두 배 촘촘한 타일을 받는다
+    cv.base = LF.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, detectRetina: true, attribution: OSM_ATTR }).addTo(cv.map);
     cv.layer = LF.layerGroup().addTo(cv.map);
-    cv.labels = () => { const z = cv.map.getZoom(), el = $('#cvMap'); el.classList.toggle('nolabel', z < 10.5); el.classList.toggle('nominor', z < 13.5); };
+    cityVector().catch((e) => console.warn('city vector map failed, keeping OSM', e && e.message));
+    cv.labels = () => { $('#cvMap').style.setProperty('--ps', pinScale()); declutter(); };
     cv.map.on('zoomend', cv.labels);
+    new ResizeObserver(() => { if (!cityView.hidden) { cv.map.invalidateSize({ animate: false }); cv.labels(); } }).observe($('#cvMap'));
     cv.map.setView([30, 10], 2);
   }
   function fitCity(latlngs, maxZoom) {
     if (!latlngs.length) return;
-    cv.map.fitBounds(LF.latLngBounds(latlngs), { paddingTopLeft: [60, 60], paddingBottomRight: [90, 80], maxZoom, animate: false });
+    cv.map.fitBounds(LF.latLngBounds(latlngs), { paddingTopLeft: [70, 60], paddingBottomRight: [70, 80], maxZoom, animate: false });
     cv.labels();
   }
-
   // 도시에서 멀리 떨어진 외곽 장소(예: 런던 시내 + 왓포드 스튜디오)가 있으면 처음엔 도심에 맞춰 확대한다
   function coreOf(places) {
     if (places.length < 4) return places;
@@ -2895,37 +3004,58 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     return core.length >= 2 ? core : places;
   }
 
+  // 목록 카드: 사진(없으면 색+이모지) + 이름 + 종류
+  function makeCard(o) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'cv-item';
+    const th = document.createElement('div'); th.className = 'cv-thumb';
+    const img = document.createElement('div'); img.className = 'cv-img';
+    const n = document.createElement('span'); n.className = 'cv-num sm'; n.textContent = o.num; n.style.background = o.color;
+    th.append(img, n);
+    fillPhoto(img, o.name, o.photo, o.K);
+    const box = document.createElement('div'); box.className = 't';
+    const nm = document.createElement('b'); nm.textContent = o.name;
+    box.appendChild(nm);
+    o.sub.filter(Boolean).forEach((t) => { const s = document.createElement('span'); s.textContent = t; box.appendChild(s); });
+    b.append(th, box);
+    b._setPhoto = (photo) => fillPhoto(img, o.name, photo, o.K);
+    return b;
+  }
+
   function renderCityMap() {
     ensureCityMap();
-    cv.layer.clearLayers(); cv.markers.clear(); cvList.textContent = ''; cv.title = null;
+    cv.layer.clearLayers(); cv.markers.clear(); cvList.textContent = ''; cv.title = null; cv.items = []; cv.onPhoto = null;
     const vis = visibleClusters();
-    if (!vis.length) { const p = document.createElement('p'); p.className = 'cv-empty'; p.textContent = '먼저 여행 계획을 적고 적용해 주세요.'; cvList.appendChild(p); return; }
+    if (!vis.length) {
+      const p = document.createElement('p'); p.className = 'cv-empty';
+      p.textContent = events.length ? '계획에 랜드마크·박물관 같은 볼거리가 없어요. (공항·역·숙소·식당은 표시하지 않아요)' : '먼저 여행 계획을 적고 적용해 주세요.';
+      cvList.appendChild(p); return;
+    }
     const c = cv.city === null ? null : vis.find((x) => x.id === cv.city);
     if (!c) { renderOverview(vis); return; }
 
-    // 이동 선 (실제 도로 경로가 있으면 그걸 따라 그림)
-    for (let k = 1; k < cv.stops.length; k++) {
-      const lk = cv.linkAfter[k - 1];
-      if (!lk || !c.keys.has(cv.stops[k - 1].key) || !c.keys.has(cv.stops[k].key)) continue;
-      const leg = lk.leg;
-      let pts;
-      if (leg._road) { pts = []; for (let i = 0; i < leg._road.length; i += 2) pts.push([leg._road[i], leg._road[i + 1]]); }
-      else pts = [[leg.from.lat, leg.from.lng], [leg.to.lat, leg.to.lng]];
-      const M = L.MODES[leg.mode];
-      LF.polyline(pts, { color: theme.modes[leg.mode] || theme.accent, weight: 4, opacity: 0.85, dashArray: leg.mode === 'walk' ? '2 8' : null, lineCap: 'round' })
-        .bindTooltip(`${M.emoji} ${M.ko} · ${lk.day}일차${lk.time ? ' ' + lk.time + (lk.endTime ? '~' + lk.endTime : '') : ''}`, { sticky: true })
-        .addTo(cv.layer);
-    }
-    // 장소 핀(번호는 방문 순서, 색은 처음 가는 일차)
-    c.places.forEach((pl) => {
-      const major = KINDS[pl.kind].major;
-      const m = LF.marker([pl.place.lat, pl.place.lng], { icon: pinIcon(pl.num, dayColor(pl.visits[0].day), pl.name, pl.kind), keyboard: true, title: pl.name, riseOnHover: true, zIndexOffset: major ? 300 : 0 })
-        .bindPopup((layer) => layer._cvBox || (layer._cvBox = popupFor(pl, layer)), { minWidth: 250, maxWidth: 290, offset: [0, major ? -16 : -4] }).addTo(cv.layer);
-      m.on('click', () => highlight(pl.key));
-      cv.markers.set(pl.key, m);
+    // 하루 안에서 이어서 가는 순서를 점선으로(공항·역은 건너뛰고 볼거리끼리 잇는다)
+    let prev = null;
+    cv.stops.forEach((st) => {
+      if (c.byKey.has(st.key)) {
+        if (prev && prev.key !== st.key) {
+          const day = [...st.days].find((d) => prev.days.has(d));
+          if (day) LF.polyline([[prev.place.lat, prev.place.lng], [st.place.lat, st.place.lng]], { color: dayColor(day), weight: 3, opacity: 0.8, dashArray: '2 9', lineCap: 'round' }).addTo(cv.layer);
+        }
+        prev = st;
+      } else if (cv.sightKeys.has(st.key)) prev = null; // 다른 도시의 볼거리
     });
 
-    // 오른쪽(모바일은 아래) 목록
+    // 사진 핀(번호=방문 순서, 테두리 색=처음 가는 일차)
+    const n = c.places.length;
+    c.places.forEach((pl) => {
+      const m = LF.marker([pl.place.lat, pl.place.lng], { icon: placeIcon(pl), keyboard: true, title: pl.name, riseOnHover: true, zIndexOffset: 100 + (n - pl.num) })
+        .bindPopup((layer) => layer._cvBox || (layer._cvBox = popupFor(pl, layer)), { minWidth: 230, maxWidth: 290, maxHeight: window.innerWidth <= 520 ? 250 : null, offset: [0, -PIN / 2 + 4] }).addTo(cv.layer);
+      m.on('click', () => highlight(pl.key));
+      cv.markers.set(pl.key, m);
+      cv.items.push(pl);
+    });
+
+    // 오른쪽(모바일은 아래) 사진 카드 목록
     const days = [...new Set(c.places.flatMap((pl) => pl.visits.map((v) => v.day)))].sort((a, b) => a - b);
     const head = document.createElement('div'); head.className = 'cv-listhead';
     const t = document.createElement('strong'); t.textContent = cityTitle(c); cv.title = t;
@@ -2935,29 +3065,31 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     days.forEach((d) => { const s = document.createElement('span'); s.className = 'cv-day'; const i = document.createElement('i'); i.style.background = dayColor(d); s.append(i, `${d}일차`); head.appendChild(s); });
     cvList.appendChild(head);
     const core = coreOf(c.places);
-    if (core.length < c.places.length) {
-      const hint = document.createElement('p'); hint.className = 'cv-empty';
-      hint.textContent = `도심에서 먼 ${c.places.length - core.length}곳은 지도 밖에 있어요. 목록에서 누르거나 '모두 보기'로 확인하세요.`;
-      cvList.appendChild(hint);
-    }
+    const notes = [];
+    if (core.length < c.places.length) notes.push(`도심에서 먼 ${c.places.length - core.length}곳은 지도 밖에 있어요. 카드를 누르거나 '모두 보기'로 확인하세요.`);
+    if (cv.hidden) notes.push('공항·역·숙소·식당은 표시하지 않아요.');
+    if (notes.length) { const p = document.createElement('p'); p.className = 'cv-note'; p.textContent = notes.join(' '); cvList.appendChild(p); }
+    const grid = document.createElement('div'); grid.className = 'cv-grid'; cvList.appendChild(grid);
+    const cards = new Map();
     c.places.forEach((pl) => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'cv-item'; b.dataset.key = pl.key;
-      const n = listFig(pl);
-      const box = document.createElement('div'); box.className = 't';
-      const nm = document.createElement('b'); nm.textContent = pl.name;
-      const when = document.createElement('span'); when.textContent = `${KINDS[pl.kind].ko} · ` + pl.visits.map((v) => `${v.day}일차 ${v.when}`).join(' · ');
-      box.append(nm, when);
-      const memo = pl.visits.map((v) => v.memo).find(Boolean);
-      if (memo) { const mm = document.createElement('span'); mm.textContent = memo; box.appendChild(mm); }
-      b.append(n, box);
+      const K = KINDS[pl.kind];
+      const b = makeCard({ num: pl.num, color: dayColor(pl.visits[0].day), name: pl.name, K, photo: pl.photo, sub: [`${K.emoji} ${K.ko}`, pl.visits.map((v) => `${v.day}일차 ${v.when}`).join(' · '), pl.visits.map((v) => v.memo).find(Boolean)] });
+      b.dataset.key = pl.key;
       b.addEventListener('click', () => {
         highlight(pl.key);
         cv.map.setView([pl.place.lat, pl.place.lng], Math.max(cv.map.getZoom(), 16), { animate: false });
         cv.labels(); cv.markers.get(pl.key).openPopup();
       });
-      cvList.appendChild(b);
+      grid.appendChild(b); cards.set(pl.key, b);
     });
+    cv.onPhoto = (pl) => {
+      const m = cv.markers.get(pl.key), b = cards.get(pl.key);
+      if (m) m.setIcon(placeIcon(pl));
+      if (b) b._setPhoto(pl.photo);
+      declutterSoon();
+    };
     fitCity(core.map((p) => [p.place.lat, p.place.lng]), 16);
+    ensurePhotos(c.places, (pl) => { if (cv.onPhoto && !cityView.hidden) cv.onPhoto(pl); });
   }
   function highlight(key) {
     cvList.querySelectorAll('.cv-item').forEach((b) => {
@@ -2966,26 +3098,34 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       if (on) b.scrollIntoView({ block: 'nearest' });
     });
   }
-  // 도시를 아직 안 골랐을 때: 도시마다 핀 하나
+  // 도시를 아직 안 골랐을 때: 도시마다 대표 사진 핀 하나
   function renderOverview(vis) {
     const head = document.createElement('div'); head.className = 'cv-listhead';
     const t = document.createElement('strong'); t.textContent = `${cv.country || '전체 나라'} — ${vis.length}개 도시`; head.appendChild(t);
     cvList.appendChild(head);
-    const pts = [];
+    const grid = document.createElement('div'); grid.className = 'cv-grid'; cvList.appendChild(grid);
+    const pts = [], parts = new Map();
     vis.forEach((c) => {
       pts.push(...c.places.map((p) => [p.place.lat, p.place.lng]));
-      const m = LF.marker([c.center.lat, c.center.lng], { icon: pinIcon(c.places.length, theme.accent, c.name, null), title: c.name }).addTo(cv.layer);
+      const key = `c${c.id}`;
+      const m = LF.marker([c.center.lat, c.center.lng], { icon: cityIcon(c), title: c.name, zIndexOffset: 100 }).addTo(cv.layer);
       m.on('click', () => selectCity(c.id));
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'cv-item';
-      const n = document.createElement('span'); n.className = 'cv-num'; n.textContent = c.places.length; n.style.background = theme.accent;
-      const box = document.createElement('div'); box.className = 't';
-      const nm = document.createElement('b'); nm.textContent = c.name;
-      const sub = document.createElement('span'); sub.textContent = [c.country || (c.pending ? '나라 확인 중…' : ''), c.places.slice(0, 3).map((p) => p.name).join(', ') + (c.places.length > 3 ? ' 외' : '')].filter(Boolean).join(' · ');
-      box.append(nm, sub); b.append(n, box);
+      cv.markers.set(key, m); cv.items.push({ key });
+      const b = makeCard({
+        num: c.places.length, color: theme.accent, name: c.name, K: KINDS.landmark, photo: c.places[0].photo,
+        sub: [c.country || (c.pending ? '나라 확인 중…' : ''), c.places.slice(0, 4).map((p) => p.name).join(', ') + (c.places.length > 4 ? ' 외' : '')],
+      });
       b.addEventListener('click', () => selectCity(c.id));
-      cvList.appendChild(b);
+      grid.appendChild(b);
+      parts.set(c.places[0].key, { m, b, c });
     });
+    cv.onPhoto = (pl) => {
+      const x = parts.get(pl.key);
+      if (x) { x.m.setIcon(cityIcon(x.c)); x.b._setPhoto(pl.photo); }
+      declutterSoon();
+    };
     fitCity(pts, 12);
+    ensurePhotos(vis.map((c) => c.places[0]), (pl) => { if (cv.onPhoto && !cityView.hidden) cv.onPhoto(pl); });
   }
 
   function openCity() {
