@@ -1084,8 +1084,8 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     return mkTarget(leg._b, 17);
   }
   function placeTarget(p) {
-    const d = 0.0045, dl = d / Math.cos(p.lat * D2R);
-    return mkTarget([[p.lat - d, p.lng - dl], [p.lat + d, p.lng + dl]], 16);
+    const d = 0.002, dl = d / Math.cos(p.lat * D2R);
+    return mkTarget([[p.lat - d, p.lng - dl], [p.lat + d, p.lng + dl]], 17.5);
   }
   function eventTarget(idx) {
     const ev = events[Math.max(0, idx)];
