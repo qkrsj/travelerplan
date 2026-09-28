@@ -146,6 +146,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 .hudbtns { display: flex; gap: 6px; flex: none; pointer-events: none; }
 .hudbtns .pill-btn { pointer-events: auto; }
+@media (max-width: 520px) { .hudbtns { gap: 4px; } .hudbtns .pill-btn { padding: 8px 10px; font-size: 12.5px; } #title { font-size: 16px; padding: 6px 10px; } }
 
 /* 장소 검색 */
 #searchPanel {
@@ -315,49 +316,47 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 .cv-num.sm { width: 22px; height: 22px; font-size: 11.5px; border-width: 1.5px; }
 
-/* 지도 위 사진 핀 */
-.cv-mk { width: 64px; height: 64px; cursor: pointer; }
+/* 지도 위 사진 핀: 동그란 사진 + 아래 뾰족한 끝이 실제 위치를 가리킨다(끝이 좌표) */
+.cv-mk { width: 64px; height: 76px; cursor: pointer; }
 .maplibregl-marker:hover { z-index: 5; }
-.cv-pin { position: relative; width: 64px; height: 64px; }
-.cv-pbody { position: absolute; inset: 0; transform: scale(var(--ps, 1)); animation: cv-pop .6s cubic-bezier(.2, 1.5, .4, 1) both; animation-delay: calc(var(--i, 0) * 90ms); }
+.cv-pin { position: relative; width: 64px; height: 76px; }
+.cv-pbody { position: absolute; inset: 0; transform-origin: 50% 100%; transform: scale(var(--ps, 1)); animation: cv-pop .6s cubic-bezier(.2, 1.5, .4, 1) both; animation-delay: calc(var(--i, 0) * 90ms); }
 @keyframes cv-pop { from { transform: scale(0); opacity: 0; } to { transform: scale(var(--ps, 1)); opacity: 1; } }
 .cv-card {
-  width: 100%; height: 100%; border-radius: 50%; border: 4px solid #fff; overflow: hidden; background: #dde5ee;
+  position: absolute; left: 0; top: 0; z-index: 1; width: 64px; height: 64px; border-radius: 50%; border: 4px solid #fff; overflow: hidden; background: #dde5ee;
   box-shadow: 0 2px 8px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center;
 }
+.cv-tip { position: absolute; left: 50%; top: 58px; width: 14px; height: 14px; margin-left: -7px; transform: rotate(45deg); border-radius: 0 0 3px 0; box-shadow: 2px 2px 4px rgba(0,0,0,.35); }
 .cv-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cv-fbe { font-size: 28px; line-height: 1; }
-.cv-pin.active .cv-card { animation: cv-ring 1.5s ease-out infinite; }
-@keyframes cv-ring {
-  0% { box-shadow: 0 0 0 0 rgba(255,255,255,.95), 0 2px 8px rgba(0,0,0,.45); }
-  100% { box-shadow: 0 0 0 24px rgba(255,255,255,0), 0 2px 8px rgba(0,0,0,.45); }
-}
-.cv-pbody .cv-num { position: absolute; left: -7px; top: -5px; z-index: 1; }
-.cv-kbadge {
-  position: absolute; right: -5px; bottom: -3px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
-  border: 1px solid rgba(0,0,0,.2); display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1;
-  box-shadow: 0 1px 3px rgba(0,0,0,.3);
-}
+.cv-pbody .cv-num { position: absolute; left: -7px; top: -5px; z-index: 2; }
 .cv-lbl {
   position: absolute; z-index: 2; pointer-events: none;
   background: rgba(255,255,255,.96); color: #10283a; border: 1px solid rgba(16,40,58,.25); border-radius: 8px;
   padding: 1px 8px; font-size: 12.5px; font-weight: 700; white-space: nowrap; max-width: 190px; overflow: hidden; text-overflow: ellipsis;
   box-shadow: 0 1px 4px rgba(0,0,0,.3);
 }
-/* 핀이 --ps 배율로 줄어도 이름표가 핀 가장자리에 붙도록 간격을 같은 배율로 보정 */
-.cv-lbl, .cv-lbl[data-pos="b"] { top: 100%; left: 50%; transform: translateX(-50%); margin-top: calc(var(--ps, 1) * 32px - 32px + 3px); }
-.cv-lbl[data-pos="t"] { top: auto; bottom: 100%; left: 50%; transform: translateX(-50%); margin: 0 0 calc(var(--ps, 1) * 32px - 32px + 3px); }
-.cv-lbl[data-pos="r"] { top: 50%; left: 100%; transform: translateY(-50%); margin: 0 0 0 calc(var(--ps, 1) * 32px - 32px + 4px); }
-.cv-lbl[data-pos="l"] { top: 50%; left: auto; right: 100%; transform: translateY(-50%); margin: 0 calc(var(--ps, 1) * 32px - 32px + 4px) 0 0; }
+/* 핀이 --ps 배율로 줄어도(끝을 기준으로 줄어든다) 이름표가 핀 가장자리에 붙도록 같은 배율로 자리를 계산 */
+.cv-lbl, .cv-lbl[data-pos="b"] { top: 100%; left: 50%; bottom: auto; right: auto; transform: translateX(-50%); margin: 3px 0 0; }
+.cv-lbl[data-pos="t"] { top: auto; bottom: calc(var(--ps, 1) * 76px + 3px); left: 50%; transform: translateX(-50%); margin: 0; }
+.cv-lbl[data-pos="r"] { top: calc(76px - var(--ps, 1) * 44px); left: calc(32px + var(--ps, 1) * 32px + 4px); bottom: auto; transform: translateY(-50%); margin: 0; }
+.cv-lbl[data-pos="l"] { top: calc(76px - var(--ps, 1) * 44px); left: auto; right: calc(32px + var(--ps, 1) * 32px + 4px); bottom: auto; transform: translateY(-50%); margin: 0; }
 .cv-lbl.off { visibility: hidden; }
-/* 지도 위 버튼 */
-.cv-fabs { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; flex-direction: column; gap: 6px; }
-.cv-fabs[hidden] { display: none; }
-.cv-fab { cursor: pointer; border: 0; border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 13px; background: rgba(255,255,255,.96); color: #10283a; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
-.cv-fab[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
 .cv-mlpop { z-index: 6; }
 .cv-mlpop .maplibregl-popup-content { padding: 12px 12px 10px; border-radius: 14px; box-shadow: 0 8px 26px rgba(0,0,0,.35); }
 .cv-mlpop .maplibregl-popup-close-button { font-size: 20px; padding: 0 8px; }
+/* 메인 지도 위 사진 핀(위치는 스크립트가 매 프레임 옮긴다) */
+#pinLayer { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+#pinLayer .cv-mk { position: absolute; left: -32px; top: -76px; pointer-events: auto; will-change: transform; }
+#pinLayer .cv-mk.hide { display: none; }
+#pinLayer .cv-pbody { animation-delay: 0s; }
+/* 3D 보기: 아래에 기울어진 3D 건물 지도(#map3d)를 깔고, Leaflet 타일은 투명하게 해서 조작(줌 버튼·드래그)만 그대로 쓴다 */
+#map3d { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; background: var(--sea); visibility: hidden; pointer-events: none; }
+#map3d.on { visibility: visible; }
+#app.d3 #map { background: transparent; }
+#app.d3 .leaflet-tile-pane, #app.d3 .leaflet-overlay-pane { opacity: 0; }
+.pill-btn.tog { background: var(--panel); color: var(--ink); border: 1px solid var(--line); }
+.pill-btn.tog[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 
 /* 팝업 */
 .cv-pop { font-size: 12.5px; line-height: 1.5; color: #10283a; }
@@ -447,7 +446,9 @@ details code { background: var(--field); padding: 1px 5px; border-radius: 4px; f
 </head>
 <body>
 <div id="app">
+  <div id="map3d" aria-hidden="true"></div>
   <div id="map" aria-label="여행 동선 지도"></div>
+  <div id="pinLayer"></div>
   <canvas id="overlay" aria-hidden="true"></canvas>
 
   <div id="hudTop">
@@ -455,6 +456,7 @@ details code { background: var(--field); padding: 1px 5px; border-radius: 4px; f
       <h1 id="title">여행자의 여행 지도</h1>
       <div class="hudbtns">
         <button id="searchBtn" class="pill-btn" type="button" aria-expanded="false" aria-controls="searchPanel" aria-label="장소 검색" title="장소 검색">🔍</button>
+        <button id="tdBtn" class="pill-btn tog" type="button" aria-pressed="false" title="지도를 기울여 3D 건물로 보기">🏙 3D</button>
         <button id="cityBtn" class="pill-btn" type="button" aria-controls="cityView" title="나라·도시별로 확대해서 볼 곳을 한눈에 보기">🗺️ 도시별</button>
         <button id="planBtn" class="pill-btn" type="button" aria-expanded="false" aria-controls="sheet">계획·캐릭터</button>
       </div>
@@ -1239,6 +1241,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     DPR = Math.min(2.5, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
     map.invalidateSize({ animate: false });
+    if (g3.map) g3.map.resize();
     S = Math.max(0.8, Math.min(1.3, Math.min(W, H) / 520));
     measureHud();
   }
@@ -1293,6 +1296,65 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   function syncCam() {
     const c = map.getCenter();
     cam.x = L.mx(c.lng); cam.y = L.my(c.lat); cam.lz = Math.log(256 * Math.pow(2, map.getZoom()));
+    if (g3.p > 0.001 && g3.map) { // 3D 지도도 같은 중심·줌으로 맞추고 기울인다(MapLibre 줌은 Leaflet보다 1 작다)
+      const z = map.getZoom() - 1, k = `${c.lat.toFixed(6)},${c.lng.toFixed(6)},${z.toFixed(3)},${g3.p.toFixed(2)}`;
+      if (k !== g3.key) { g3.key = k; g3.map.jumpTo({ center: [c.lng, c.lat], zoom: z, pitch: g3.p, bearing: 0 }); }
+    }
+  }
+  // ---------- 3D 보기 ----------
+  const g3 = { map: null, loading: false, want: false, ready: false, p: 0, key: '', t: 0 };
+  const G3_PITCH = 58;
+  const tdBtn = $('#tdBtn');
+  function ensureG3() {
+    if (g3.map || g3.loading) return;
+    if (!window.maplibregl) { g3Fail('이 브라우저에서는 3D 지도를 쓸 수 없어요(WebGL이 필요해요).'); return; }
+    g3.loading = true; tdBtn.textContent = '🏙 불러오는 중…';
+    const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 12000);
+    fetch(OFM_STYLE, { signal: ctrl.signal }).then((r) => r.json()).then((style) => {
+      style.layers.forEach((ly) => { const tf = ly.layout && ly.layout['text-field']; if (tf && JSON.stringify(tf).includes('name')) ly.layout['text-field'] = ENGLISH; });
+      const m = new maplibregl.Map({ container: 'map3d', style, center: [0, 0], zoom: 1, interactive: false, maxPitch: 70, attributionControl: false, fadeDuration: 0 });
+      g3.map = m;
+      m.once('load', () => { g3.ready = true; g3.loading = false; tdBtn.textContent = '🏙 3D'; g3.key = ''; m.resize(); });
+      setTimeout(() => { if (!g3.ready) g3Fail('3D 지도를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요.'); }, 30000);
+    }).catch(() => g3Fail('3D 지도를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요.')).finally(() => clearTimeout(to));
+  }
+  function g3Fail(msg) {
+    if (g3.map) { try { g3.map.remove(); } catch (e) { /* 무시 */ } }
+    g3.map = null; g3.loading = false; g3.ready = false; g3.want = false; g3.p = 0;
+    tdBtn.textContent = '🏙 3D'; tdBtn.setAttribute('aria-pressed', 'false'); tdBtn.title = msg;
+    $('#map3d').classList.remove('on'); $('#app').classList.remove('d3');
+    console.warn(msg);
+  }
+  // 켜고 끌 때 서서히 기울인다
+  function stepG3(t) {
+    const dt = Math.min(0.1, Math.max(0, t - (g3.t || t))); g3.t = t;
+    const goal = g3.want && g3.ready ? G3_PITCH : 0;
+    if (g3.p === goal) return;
+    const was = g3.p > 0.001;
+    if (reduceMotion || Math.abs(goal - g3.p) < 0.4) g3.p = goal; else g3.p += (goal - g3.p) * Math.min(1, dt * 5);
+    const on = g3.p > 0.001;
+    if (on !== was) { $('#map3d').classList.toggle('on', on); $('#app').classList.toggle('d3', on); if (!on) g3.key = ''; }
+  }
+  tdBtn.addEventListener('click', () => {
+    g3.want = !g3.want;
+    tdBtn.setAttribute('aria-pressed', String(g3.want));
+    if (g3.want) ensureG3();
+  });
+  // 0~1 메르카토르 좌표 → 화면 좌표(PX, PY). 3D일 때는 기울어진 지도의 투영을 쓴다.
+  let PX = 0, PY = 0, frameId = 0;
+  function toScreen(x, y, Z) {
+    if (g3.p > 0.001 && g3.map) { const q = g3.map.project([x * 360 - 180, invLat(y)]); PX = q.x; PY = q.y; }
+    else { PX = (x - cam.x) * Z + W / 2; PY = (y - cam.y) * Z + H / 2; }
+  }
+  // 경로의 점들을 한 프레임에 한 번만 화면 좌표로 바꿔 둔다(점선·테두리·색선이 함께 씀)
+  function legScreen(leg, Z) {
+    const P = leg.path, n = P.xs.length;
+    if (leg._fid === frameId && leg._fp === P) return leg._sc;
+    let sc = leg._sc;
+    if (!sc || sc.x.length !== n) sc = leg._sc = { x: new Float64Array(n), y: new Float64Array(n) };
+    for (let i = 0; i < n; i++) { toScreen(P.xs[i], P.ys[i], Z); sc.x[i] = PX; sc.y[i] = PY; }
+    leg._fid = frameId; leg._fp = P;
+    return sc;
   }
   // ---------- 그리기 도우미 ----------
   function rrPath(x, y, w, h, r) {
@@ -1498,10 +1560,12 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   }
   function strokeLeg(leg, p, Z) {
     const P = leg.path;
-    if (P.maxx < cam.x - W / 2 / Z - 0.001 || P.minx > cam.x + W / 2 / Z + 0.001 || P.maxy < cam.y - H / 2 / Z - 0.001 || P.miny > cam.y + H / 2 / Z + 0.001) return;
+    const k = g3.p > 0.001 ? 6 : 1; // 기울이면 멀리까지 보이므로 넉넉히
+    if (P.maxx < cam.x - k * W / 2 / Z - 0.001 || P.minx > cam.x + k * W / 2 / Z + 0.001 || P.maxy < cam.y - k * H / 2 / Z - 0.001 || P.miny > cam.y + k * H / 2 / Z + 0.001) return;
     const e = L.pathAt(leg, p);
+    const sc = legScreen(leg, Z);
     const M = 40;
-    let px = (P.xs[0] - cam.x) * Z + W / 2, py = (P.ys[0] - cam.y) * Z + H / 2;
+    let px = sc.x[0], py = sc.y[0];
     let lx = null, ly = null;
     ctx.beginPath();
     // 확대가 크면 좌표가 너무 커지므로(점선이 수백만 개가 됨) 화면 안쪽만 잘라서 그림
@@ -1513,19 +1577,20 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       }
       px = x1; py = y1;
     };
-    for (let i = 1; i <= e.idx; i++) seg((P.xs[i] - cam.x) * Z + W / 2, (P.ys[i] - cam.y) * Z + H / 2);
-    seg((e.x - cam.x) * Z + W / 2, (e.y - cam.y) * Z + H / 2);
+    for (let i = 1; i <= e.idx; i++) seg(sc.x[i], sc.y[i]);
+    toScreen(e.x, e.y, Z); seg(PX, PY);
     ctx.stroke();
   }
 
   const FONT = "'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
 
   function drawLabels(Z, cur) {
-    const rects = [];
+    const rects = mp.rects.slice(); // 사진 핀이 있는 자리는 피한다
     const items = [];
     const curDay = cur.day;
     for (const n of nodes) {
-      const sx = (n.x - cam.x) * Z + W / 2, sy = (n.y - cam.y) * Z + H / 2;
+      if (mp.vis.has(n.key)) continue; // 사진 핀은 자기 이름표가 있다
+      toScreen(n.x, n.y, Z); const sx = PX, sy = PY;
       if (sx < -20 || sx > W + 20 || sy < hud.top - 10 || sy > H - hud.bottom + 10) continue;
       let pr = 4;
       if (n.key === cur.toKey) pr = 0; else if (n.key === cur.fromKey) pr = 1;
@@ -1565,6 +1630,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
 
   function draw(time, cur) {
     const Z = Math.exp(cam.lz);
+    frameId++;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     ctx.clearRect(0, 0, W, H);
@@ -1588,7 +1654,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
 
     // 장소 점
     for (const n of nodes) {
-      const sx = (n.x - cam.x) * Z + W / 2, sy = (n.y - cam.y) * Z + H / 2;
+      toScreen(n.x, n.y, Z); const sx = PX, sy = PY;
       if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
       const visited = n.visitIdx <= ctl.curIdx;
       const r = (n.days.has(cur.day) ? 6.2 : 4.8) * S;
@@ -1599,7 +1665,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     drawLabels(Z, cur);
 
     // 캐릭터 (탈것)
-    const sx = (cur.x - cam.x) * Z + W / 2, sy = (cur.y - cam.y) * Z + H / 2;
+    toScreen(cur.x, cur.y, Z); const sx = PX, sy = PY;
     if (cur.mode !== veh.mode) { veh.mode = cur.mode; veh.since = time; }
     const pt = Math.min(1, (time - veh.since) / 0.28);
     const pop = 0.55 + 0.45 * easeOutBack(pt);
@@ -2538,7 +2604,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   map.on('click', (e) => {
     if (!lastCur || ctl.anim) return; // 이동 중엔 무시
     const Z = Math.exp(cam.lz);
-    const sx = (lastCur.x - cam.x) * Z + W / 2, sy = (lastCur.y - cam.y) * Z + H / 2;
+    toScreen(lastCur.x, lastCur.y, Z); const sx = PX, sy = PY;
     const dx = e.containerPoint.x - sx, dy = e.containerPoint.y - (sy - 14 * S);
     if (dx * dx + dy * dy > (34 * S) ** 2) return; // 캐릭터 근처를 클릭했을 때만
     const p = currentPlace();
@@ -2658,7 +2724,8 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   // ---------- 메인 루프 ----------
   // 지도가 움직이는 즉시 오버레이도 다시 그려서 어긋나지 않게 함
   let lastT = 0, lastCur = null;
-  map.on('move zoom', () => { if (lastCur && !follow.busy) { syncCam(); draw(lastT, lastCur); } });
+  map.on('move zoom', () => { if (lastCur && !follow.busy) { syncCam(); paint(lastT, lastCur); } });
+  const paint = (t, cur) => { draw(t, cur); updatePins(cur); };
   function frame(now) {
     const t = now / 1000;
     if (events.length && (!cityView || cityView.hidden)) { // 도시 지도가 위를 덮고 있는 동안은 뒤의 지도·캐릭터를 그리지 않는다
@@ -2667,9 +2734,10 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       const cur = currentView(t);
       if (cur.moving && ctl.camBoost === 1 && !reduceMotion) followVehicle(cur, t);
       else { follow.leg = null; steerCamera(camTarget()); }
+      stepG3(t);
       syncCam();
       lastT = t; lastCur = cur;
-      draw(t, cur);
+      paint(t, cur);
     }
     requestAnimationFrame(frame);
   }
@@ -2681,7 +2749,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   const revCache = (() => { try { return JSON.parse(store.get(REV_KEY) || '{}') || {}; } catch (e) { return {}; } })();
   const DAY_COLORS = ['#e11d48', '#0b7dc4', '#1f9e4b', '#c77700', '#7b4fd6', '#0f9d8f', '#d9508a', '#5b6b78'];
   const dayColor = (d) => DAY_COLORS[(((d - 1) % DAY_COLORS.length) + DAY_COLORS.length) % DAY_COLORS.length];
-  const cv = { clusters: [], country: '', city: null, dirty: true, run: 0, map: null, markers: new Map(), stops: [], hidden: 0, items: [], onPhoto: null, tilt: false, flown: false, openPop: null, tour: null };
+  const cv = { clusters: [], country: '', city: null, dirty: true, run: 0, map: null, markers: new Map(), stops: [], hidden: 0, items: [], onPhoto: null, flown: false, openPop: null };
 
   // ---------- 장소 종류 ----------
   // 이름에서 종류를 짐작한다. hidden인 종류(공항·역·숙소·식당)는 도시 지도에 올리지 않는다.
@@ -2888,19 +2956,19 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       const e = document.createElement('span'); e.className = 'cv-fbe'; e.textContent = K.emoji; box.appendChild(e);
     }
   }
-  const PIN = 64;
-  const placePin = (pl) => ({ num: pl.num, color: dayColor(pl.visits[0].day), name: pl.name, K: KINDS[pl.kind], photo: pl.photo, badge: KINDS[pl.kind].emoji });
+  const PIN = 64, PINH = 76; // 사진 지름 / 끝까지의 높이
+  const placePin = (pl) => ({ num: pl.num, color: dayColor(pl.visits[0].day), name: pl.name, K: KINDS[pl.kind], photo: pl.photo });
   const cityPin = (c) => ({ num: c.places.length, color: theme.accent, name: c.name, K: KINDS.landmark, photo: c.places[0].photo });
-  // o: { num, color, name, K:{emoji,color}, photo, badge }. MapLibre가 바깥 요소(.cv-mk)의 위치를 옮기므로 그림은 안쪽(.cv-pin)에 둔다
+  // o: { num, color, name, K:{emoji,color}, photo }. 지도가 바깥 요소(.cv-mk)의 위치를 옮기므로 그림은 안쪽(.cv-pin)에 둔다. 핀 끝(아래 가운데)이 좌표
   function makePin(o, idx) {
     const el = document.createElement('div'); el.className = 'cv-mk';
     const pin = document.createElement('div'); pin.className = 'cv-pin';
     const body = document.createElement('div'); body.className = 'cv-pbody'; body.style.setProperty('--i', idx || 0); // 차례로 톡톡 나타나는 애니메이션
     const card = document.createElement('div'); card.className = 'cv-card'; card.style.borderColor = o.color;
     fillPhoto(card, o.name, o.photo, o.K);
+    const tip = document.createElement('span'); tip.className = 'cv-tip'; tip.style.background = o.color; // 아래 뾰족한 끝이 실제 위치
     const n = document.createElement('span'); n.className = 'cv-num sm'; n.textContent = o.num; n.style.background = o.color;
-    body.append(card, n);
-    if (o.badge) { const kb = document.createElement('span'); kb.className = 'cv-kbadge'; kb.textContent = o.badge; body.appendChild(kb); }
+    body.append(tip, card, n);
     const l = document.createElement('span'); l.className = 'cv-lbl'; l.textContent = o.name;
     pin.append(body, l); el.appendChild(pin);
     el.title = o.name;
@@ -2908,26 +2976,25 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   }
   const updatePin = (el, o) => { const card = el.querySelector('.cv-card'); if (card) fillPhoto(card, o.name, o.photo, o.K); };
 
-  // 핀 배율: 좁은 화면이거나 멀리서 볼수록 작게
+  // 핀 배율: 좁은 화면이거나 멀리서 볼수록 작게(핀 끝을 기준으로 줄어든다)
   const pinScale = () => (window.innerWidth <= 520 ? 0.8 : 1) * (cv.map && cv.map.getZoom() < 12.5 ? 0.7 : 1);
   // 이름표는 핀의 아래·위·오른쪽·왼쪽 중 다른 이름표·핀과 안 겹치는 자리에 놓는다(어디에도 못 놓으면 감춤, 가까이 확대하면 다 보임)
   const rectHit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   function declutter() {
     if (!cv.map) return;
-    const s = pinScale(), half = (PIN / 2) * s;
-    const gv = half + 3, gh = half + 4; // 핀 중심에서 이름표까지 거리(CSS의 margin과 맞춘 값)
+    const s = pinScale(), pw = PIN * s, ph = PINH * s;
     const pts = cv.items.map((it) => { const m = cv.markers.get(it.key); return m && { m, p: cv.map.project(m.getLngLat()) }; }).filter(Boolean);
-    const pinRects = pts.map(({ p }) => ({ x: p.x - half, y: p.y - half, w: half * 2, h: half * 2 }));
+    const pinRects = pts.map(({ p }) => ({ x: p.x - pw / 2, y: p.y - ph, w: pw, h: ph })); // p = 핀 끝
     const placed = [];
     pts.forEach(({ m, p }, i) => {
       const lbl = m.getElement().querySelector('.cv-lbl');
       if (!lbl) return;
-      const w = lbl.offsetWidth, h = lbl.offsetHeight;
+      const w = lbl.offsetWidth, h = lbl.offsetHeight, cy = p.y - (PINH - PIN / 2) * s; // 동그란 사진의 가운데 높이
       const spots = [
-        ['b', { x: p.x - w / 2, y: p.y + gv, w, h }],
-        ['t', { x: p.x - w / 2, y: p.y - gv - h, w, h }],
-        ['r', { x: p.x + gh, y: p.y - h / 2, w, h }],
-        ['l', { x: p.x - gh - w, y: p.y - h / 2, w, h }],
+        ['b', { x: p.x - w / 2, y: p.y + 3, w, h }],
+        ['t', { x: p.x - w / 2, y: p.y - ph - 3 - h, w, h }],
+        ['r', { x: p.x + pw / 2 + 4, y: cy - h / 2, w, h }],
+        ['l', { x: p.x - pw / 2 - 4 - w, y: cy - h / 2, w, h }],
       ];
       const ok = spots.find(([, r]) => !placed.some((q) => rectHit(q, r)) && !pinRects.some((q, j) => j !== i && rectHit(q, r)));
       lbl.classList.toggle('off', !ok);
@@ -2973,7 +3040,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     return box;
   }
   function makePopup(pl) {
-    const pop = new maplibregl.Popup({ offset: 34, maxWidth: '290px', closeButton: true, focusAfterOpen: false, className: 'cv-mlpop' });
+    const pop = new maplibregl.Popup({ offset: { top: [0, 6], 'top-left': [0, 6], 'top-right': [0, 6], bottom: [0, -72], 'bottom-left': [0, -72], 'bottom-right': [0, -72], left: [18, -38], right: [-18, -38] }, maxWidth: '290px', closeButton: true, focusAfterOpen: false, className: 'cv-mlpop' });
     let built = false;
     pop.on('open', () => {
       if (!built) { pop.setDOMContent(popupFor(pl)); built = true; }
@@ -2986,7 +3053,8 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   }
 
   // ---------- 지도 (MapLibre: 자세한 3D 건물 지도 + 카메라 이동 애니메이션) ----------
-  const OFM_DETAIL = 'https://tiles.openfreemap.org/styles/liberty'; // 도로·공원·물·건물·명소 아이콘이 풍부한 스타일(3D 건물 포함)
+  const OFM_SIMPLE = 'https://tiles.openfreemap.org/styles/positron'; // 색·글자를 줄인 간단한 지도(핀이 잘 보이도록)
+  const OFM_3D = 'https://tiles.openfreemap.org/styles/liberty'; // 3D 건물이 있는 지도(메인 지도의 3D 보기용)
   const RASTER_STYLE = { version: 8, sources: { osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19, attribution: OSM_ATTR } }, layers: [{ id: 'osm', type: 'raster', source: 'osm' }] };
   const EMPTY_FC = { type: 'FeatureCollection', features: [] };
   // 스타일 JSON을 지도에 넘기기 전에 지명을 영어로 바꾼다(지도를 만든 뒤 레이어마다 바꾸면 그때마다 타일을 다시 해석해서 아주 느려진다)
@@ -2996,6 +3064,12 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       if (tf && JSON.stringify(tf).includes('name')) ly.layout['text-field'] = ENGLISH;
     });
     return style;
+  }
+  // 도시별 지도용: 건물·철도·도로 번호판·작은 길 이름·공항 표시를 빼서 장소와 위치가 눈에 띄게 한다
+  const SIMPLE_DROP = /^(building|railway|highway-shield|road_shield|highway-name-(path|minor)|airport|aeroway|waterway_line_label|water_name_line_label|boundary_3|highway_path)/;
+  function simpleStyle(style) {
+    style.layers = style.layers.filter((ly) => !SIMPLE_DROP.test(ly.id));
+    return englishStyle(style);
   }
   // 이동 선을 얹을 레이어(스타일이 바뀌면 다시 만든다)
   function setupRoutes() {
@@ -3039,14 +3113,15 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     cv.raster = true;
     try {
       const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 8000);
-      try { style = englishStyle(await (await fetch(OFM_DETAIL, { signal: ctrl.signal })).json()); cv.raster = false; } finally { clearTimeout(to); }
+      try { style = simpleStyle(await (await fetch(OFM_SIMPLE, { signal: ctrl.signal })).json()); cv.raster = false; } finally { clearTimeout(to); }
     } catch (e) { console.warn('city style failed, using OSM', e && e.message); }
     try {
-      cv.map = new maplibregl.Map({ container: 'cvMap', style, center: [10, 30], zoom: 1.6, maxPitch: 75, attributionControl: false, fadeDuration: 150 });
+      cv.map = new maplibregl.Map({ container: 'cvMap', style, center: [10, 30], zoom: 1.6, maxPitch: 0, dragRotate: false, attributionControl: false, fadeDuration: 150 });
     } catch (e) { console.warn('city map failed', e && e.message); cv.map = null; return false; }
     const m = cv.map;
     m.addControl(new maplibregl.AttributionControl({ compact: true }));
-    m.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-left');
+    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+    m.touchZoomRotate.disableRotation();
     let loaded = false;
     const useRaster = () => { if (cv.raster) return; cv.raster = true; m.setStyle(RASTER_STYLE); }; // 벡터 지도가 안 불러와지면 OSM 기본 지도로
     m.on('style.load', () => { setupRoutes(); });
@@ -3055,22 +3130,6 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     cv.labels = () => { $('#cvMap').style.setProperty('--ps', pinScale()); declutter(); };
     m.on('moveend', cv.labels);
     m.on('zoomend', cv.labels);
-    // 사용자가 지도를 직접 만지면 투어는 멈춘다
-    ['mousedown', 'touchstart', 'wheel'].forEach((ev) => m.getCanvas().addEventListener(ev, () => stopTour(), { passive: true }));
-
-    // 지도 위 버튼: 기울여서 3D로 / 투어
-    const fabs = document.createElement('div'); fabs.className = 'cv-fabs'; cv.fabs = fabs;
-    const tilt = document.createElement('button'); tilt.type = 'button'; tilt.className = 'cv-fab'; tilt.textContent = '🏙 3D'; tilt.setAttribute('aria-pressed', String(cv.tilt));
-    tilt.title = '지도를 기울여 3D 건물로 보기';
-    tilt.addEventListener('click', () => {
-      cv.tilt = !cv.tilt; tilt.setAttribute('aria-pressed', String(cv.tilt));
-      m.easeTo({ pitch: cv.tilt ? 55 : 0, bearing: cv.tilt ? m.getBearing() || -12 : 0, duration: reduceMotion ? 0 : 900 });
-    });
-    const tour = document.createElement('button'); tour.type = 'button'; tour.className = 'cv-fab'; tour.textContent = '🎬 투어'; cv.tourBtn = tour;
-    tour.title = '방문 순서대로 카메라가 장소를 날아다녀요';
-    tour.addEventListener('click', () => (cv.tour ? stopTour() : startTour()));
-    fabs.append(tilt, tour);
-    $('#cvMap').appendChild(fabs);
     return true;
   }
   // 지도가 있으면 true, 만드는 중이면 false(만들어진 뒤 알아서 다시 그림)
@@ -3087,7 +3146,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     const narrow = window.innerWidth <= 520;
     const cam = cv.map.cameraForBounds(b, { padding: { top: narrow ? 50 : 70, left: narrow ? 50 : 80, right: narrow ? 50 : 80, bottom: narrow ? 70 : 100 }, maxZoom: opt.maxZoom || 16 });
     if (!cam) return;
-    const to = { center: cam.center, zoom: cam.zoom, pitch: opt.flat ? 0 : (cv.tilt ? 55 : 0), bearing: opt.flat ? 0 : (cv.tilt ? -12 : 0), essential: true };
+    const to = { center: cam.center, zoom: cam.zoom, essential: true };
     if (opt.jump || reduceMotion) cv.map.jumpTo(to);
     else cv.map.flyTo(Object.assign(to, { duration: opt.duration || 2400, curve: 1.6 }));
   }
@@ -3098,40 +3157,6 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     const m = { lat: med(places.map((p) => p.place.lat)), lng: med(places.map((p) => p.place.lng)) };
     const core = places.filter((p) => L.haversine(m, p.place) <= 15);
     return core.length >= 2 ? core : places;
-  }
-
-  // ---------- 투어: 방문 순서대로 카메라가 장소를 날아다니며 사진 팝업을 띄운다 ----------
-  function stopTour() {
-    if (!cv.tour) return;
-    clearTimeout(cv.tour.timer); cv.tour.token++; cv.tour = null;
-    if (cv.tourBtn) { cv.tourBtn.textContent = '🎬 투어'; cv.tourBtn.setAttribute('aria-pressed', 'false'); }
-    document.querySelectorAll('.cv-pin.active').forEach((e) => e.classList.remove('active'));
-  }
-  function startTour() {
-    const c = cv.city === null ? null : cv.clusters.find((x) => x.id === cv.city);
-    if (!c || !cv.map) return;
-    if (cv.openPop) cv.openPop.remove();
-    const tour = { token: 0, timer: null }; cv.tour = tour;
-    cv.tourBtn.textContent = '⏹ 멈춤'; cv.tourBtn.setAttribute('aria-pressed', 'true');
-    const step = (i) => {
-      if (cv.tour !== tour) return;
-      document.querySelectorAll('.cv-pin.active').forEach((e) => e.classList.remove('active'));
-      if (i >= c.places.length) { flyToPlaces(coreOf(c.places), { duration: 2600 }); tour.timer = setTimeout(stopTour, 2800); return; }
-      const pl = c.places[i], m = cv.markers.get(pl.key);
-      if (cv.openPop) cv.openPop.remove();
-      highlight(pl.key);
-      const to = { center: [pl.place.lng, pl.place.lat], zoom: 16.2, pitch: 62, bearing: ((i * 47 + 20) % 360), essential: true };
-      const arrive = () => {
-        if (cv.tour !== tour) return;
-        const el = m && m.getElement().querySelector('.cv-pin'); if (el) el.classList.add('active');
-        if (m) { const pop = m.getPopup(); if (pop && !pop.isOpen()) m.togglePopup(); }
-        tour.timer = setTimeout(() => step(i + 1), 4200);
-      };
-      if (reduceMotion) { cv.map.jumpTo(to); arrive(); return; }
-      cv.map.flyTo(Object.assign(to, { duration: i === 0 ? 3200 : 2600, curve: 1.5 }));
-      cv.map.once('moveend', arrive);
-    };
-    step(0);
   }
 
   // 목록 카드: 사진(없으면 색+이모지) + 이름 + 종류
@@ -3152,7 +3177,6 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   }
 
   function renderCityMap() {
-    stopTour();
     cvList.textContent = ''; cv.title = null; cv.items = []; cv.onPhoto = null;
     cv.markers.forEach((m) => m.remove()); cv.markers.clear();
     if (cv.openPop) cv.openPop.remove();
@@ -3165,14 +3189,12 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     }
     cancelAnimationFrame(cv.routeRaf); setRoutes(EMPTY_FC);
     if (!vis.length) {
-      cv.fabs.hidden = true;
       const p = document.createElement('p'); p.className = 'cv-empty';
       p.textContent = events.length ? '계획에 랜드마크·박물관 같은 볼거리가 없어요. (공항·역·숙소·식당은 표시하지 않아요)' : '먼저 여행 계획을 적고 적용해 주세요.';
       cvList.appendChild(p); return;
     }
     const c = cv.city === null ? null : vis.find((x) => x.id === cv.city);
     if (!c) { renderOverview(vis); return; }
-    cv.fabs.hidden = false;
     const first = !cv.flown; cv.flown = true;
 
     // 하루 안에서 이어서 가는 순서(공항·역은 건너뛰고 볼거리끼리 잇는다)
@@ -3191,7 +3213,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     // 사진 핀(번호=방문 순서, 테두리 색=처음 가는 일차)
     c.places.forEach((pl, i) => {
       const el = makePin(placePin(pl), i);
-      const m = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([pl.place.lng, pl.place.lat]).setPopup(makePopup(pl)).addTo(cv.map);
+      const m = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([pl.place.lng, pl.place.lat]).setPopup(makePopup(pl)).addTo(cv.map);
       cv.markers.set(pl.key, m); cv.items.push(pl);
     });
 
@@ -3200,7 +3222,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     const head = document.createElement('div'); head.className = 'cv-listhead';
     const t = document.createElement('strong'); t.textContent = cityTitle(c); cv.title = t;
     const fit = document.createElement('button'); fit.type = 'button'; fit.className = 'qb'; fit.textContent = '모두 보기';
-    fit.addEventListener('click', () => { stopTour(); if (cv.openPop) cv.openPop.remove(); flyToPlaces(c.places, { duration: 1600 }); highlight(null); });
+    fit.addEventListener('click', () => { if (cv.openPop) cv.openPop.remove(); flyToPlaces(c.places, { duration: 1600 }); highlight(null); });
     head.append(t, fit);
     days.forEach((d) => { const s = document.createElement('span'); s.className = 'cv-day'; const i = document.createElement('i'); i.style.background = dayColor(d); s.append(i, `${d}일차`); head.appendChild(s); });
     cvList.appendChild(head);
@@ -3216,7 +3238,6 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       const b = makeCard({ num: pl.num, color: dayColor(pl.visits[0].day), name: pl.name, K, photo: pl.photo, sub: [`${K.emoji} ${K.ko}`, pl.visits.map((v) => `${v.day}일차 ${v.when}`).join(' · '), pl.visits.map((v) => v.memo).find(Boolean)] });
       b.dataset.key = pl.key;
       b.addEventListener('click', () => {
-        stopTour();
         highlight(pl.key);
         const m = cv.markers.get(pl.key);
         cv.map.flyTo({ center: [pl.place.lng, pl.place.lat], zoom: Math.max(cv.map.getZoom(), 16), essential: true, duration: reduceMotion ? 0 : 1400 });
@@ -3246,7 +3267,6 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   }
   // 도시를 아직 안 골랐을 때: 도시마다 대표 사진 핀 하나
   function renderOverview(vis) {
-    cv.fabs.hidden = true;
     const head = document.createElement('div'); head.className = 'cv-listhead';
     const t = document.createElement('strong'); t.textContent = `${cv.country || '전체 나라'} — ${vis.length}개 도시`; head.appendChild(t);
     cvList.appendChild(head);
@@ -3257,7 +3277,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       const key = `c${c.id}`;
       const el = makePin(cityPin(c), i);
       el.addEventListener('click', () => selectCity(c.id));
-      const m = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([c.center.lng, c.center.lat]).addTo(cv.map);
+      const m = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([c.center.lng, c.center.lat]).addTo(cv.map);
       cv.markers.set(key, m); cv.items.push({ key });
       const b = makeCard({
         num: c.places.length, color: theme.accent, name: c.name, K: KINDS.landmark, photo: c.places[0].photo,
@@ -3283,21 +3303,95 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     $('#cityBtn').setAttribute('aria-expanded', 'true');
     ensureCityMap();
     if (!events.length) { renderCityNav(); renderCityMap(); return; }
-    if (cv.dirty) { buildCityData(); cv.country = ''; cv.city = cv.clusters.length ? cv.clusters[0].id : null; }
+    prepareCity();
     if (cv.map) cv.map.resize();
     renderCityNav(); renderCityMap();
     const run = ++cv.run;
     if (cv.clusters.some((c) => c.pending)) nameCities(run);
   }
   function closeCity() {
-    stopTour(); cv.run++;
+    cv.run++;
     cityView.hidden = true;
     $('#cityBtn').setAttribute('aria-expanded', 'false');
   }
   // 계획이 새로 적용되면 도시 목록을 다시 만든다(도시 지도가 열려 있으면 바로 갱신)
   function cityPlanChanged() {
     cv.dirty = true;
+    refreshPins();
     if (!cityView.hidden) openCity();
+  }
+  function prepareCity() {
+    if (!cv.dirty) return;
+    buildCityData(); cv.country = ''; cv.city = cv.clusters.length ? cv.clusters[0].id : null;
+  }
+
+  // ---------- 메인 지도 위 사진 핀: 계획에 있는 볼거리마다 실제 사진 핀(도시별 지도와 같은 모양) ----------
+  // 핀은 캔버스 아래 층에 있고, 위치는 지도(2D·3D 모두)의 투영으로 매 프레임 옮긴다. 누르면 장소 설명 카드가 열린다.
+  const mp = { list: [], vis: new Set(), rects: [], run: 0, started: false, shown: true };
+  const PIN_MIN_ZOOM = 9.5; // 이보다 멀리서 보면 핀을 감춘다(나라·대륙 규모에서는 점만)
+  function refreshPins() {
+    const layer = $('#pinLayer');
+    layer.textContent = ''; mp.list = []; mp.vis = new Set(); mp.rects = []; mp.started = false; mp.run++;
+    if (!events.length) return;
+    prepareCity();
+    cv.clusters.forEach((c) => c.places.forEach((pl) => {
+      const el = makePin(placePin(pl), 0);
+      el.classList.add('hide');
+      el.addEventListener('click', () => openPlaceInfo(pl.place));
+      layer.appendChild(el);
+      mp.list.push({ pl, el, lbl: el.querySelector('.cv-lbl'), x: L.mx(pl.place.lng), y: L.my(pl.place.lat), ps: 0, hidden: true, lblOff: null });
+    }));
+  }
+  function startPinPhotos() {
+    mp.started = true;
+    const run = mp.run, byKey = new Map(mp.list.map((it) => [it.pl.key, it]));
+    ensurePhotos(mp.list.map((it) => it.pl), (pl) => {
+      const it = byKey.get(pl.key);
+      if (it && run === mp.run) updatePin(it.el, placePin(pl));
+    });
+  }
+  function updatePins(cur) {
+    const layer = $('#pinLayer');
+    const zoom = map.getZoom();
+    const on = mp.list.length > 0 && zoom >= PIN_MIN_ZOOM && (!cityView || cityView.hidden);
+    if (!on) {
+      if (mp.shown) { layer.style.display = 'none'; mp.shown = false; mp.vis = new Set(); mp.rects = []; }
+      return;
+    }
+    if (!mp.shown) { layer.style.display = ''; mp.shown = true; }
+    if (!mp.started) startPinPhotos();
+    const Z = Math.exp(cam.lz), tilt = g3.p > 0.001;
+    toScreen(cur.x, cur.y, Z); const chX = PX, chY = PY; // 캐릭터가 서 있는 자리
+    const base = (window.innerWidth <= 520 ? 0.8 : 1) * (zoom >= 13 ? 1 : zoom >= 11.5 ? 0.82 : 0.66);
+    const inView = [];
+    for (const it of mp.list) {
+      toScreen(it.x, it.y, Z);
+      const ps = base * (tilt ? Math.max(0.55, Math.min(1.15, 0.5 + 0.75 * (PY / H))) : 1); // 3D에서는 멀리(위쪽) 있는 핀이 작게
+      it.sx = PX; it.sy = PY; it.nps = ps;
+      if (Math.abs(PX - chX) < 26 && Math.abs(PY - chY) < 26) it.sy -= 46 * ps; // 캐릭터가 사진을 가리지 않게 머리 위로 올린다
+      it.pri = it.pl.key === cur.toKey || it.pl.key === cur.fromKey ? 0 : it.pl.visits.some((v) => v.day === cur.day) ? 1 : 2;
+      const ok = PX > -40 && PX < W + 40 && PY > hud.top + 24 && PY < H - hud.bottom + 70;
+      if (ok) inView.push(it); else it.want = false;
+    }
+    // 겹치는 핀은 지금 일차·현재 장소 것을 먼저 남기고 나머지는 감춘다(확대하면 다 나온다)
+    inView.sort((a, b) => a.pri - b.pri || b.sy - a.sy);
+    const kept = [], vis = new Set(), rects = [];
+    for (const it of inView) {
+      const w = 64 * it.nps, h = 76 * it.nps, r = { x: it.sx - w / 2, y: it.sy - h, w, h };
+      it.want = !kept.some((q) => r.x < q.x + q.w - 4 && q.x < r.x + r.w - 4 && r.y < q.y + q.h - 4 && q.y < r.y + r.h - 4);
+      if (it.want) { kept.push(r); vis.add(it.pl.key); rects.push([r.x, r.y, r.w, r.h + 22]); it.lblWant = it.pri <= 1 || zoom >= 14; }
+    }
+    mp.vis = vis; mp.rects = rects;
+    for (const it of mp.list) {
+      const hide = !it.want;
+      if (hide !== it.hidden) { it.hidden = hide; it.el.classList.toggle('hide', hide); }
+      if (hide) continue;
+      it.el.style.transform = `translate(${it.sx.toFixed(1)}px, ${it.sy.toFixed(1)}px)`;
+      if (Math.abs(it.nps - it.ps) > 0.01) { it.ps = it.nps; it.el.style.setProperty('--ps', it.nps.toFixed(3)); }
+      const off = !it.lblWant;
+      if (off !== it.lblOff) { it.lblOff = off; if (it.lbl) it.lbl.classList.toggle('off', off); }
+      it.el.style.zIndex = String(1000 - it.pri * 100 + Math.round(it.sy / 10)); // 지금 가는 곳이 위, 같으면 아래쪽(가까운) 핀이 위
+    }
   }
   $('#cityBtn').addEventListener('click', () => (cityView.hidden ? openCity() : closeCity()));
   $('#cvClose').addEventListener('click', closeCity);
