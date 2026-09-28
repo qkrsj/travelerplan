@@ -302,15 +302,30 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   color: #fff; font-weight: 700; font-size: 12.5px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45);
 }
 .cv-icon { background: none; border: 0; }
-.cv-pin { display: flex; align-items: center; gap: 5px; width: max-content; }
+.cv-pin { position: relative; width: 100%; height: 100%; }
 .cv-lbl {
-  background: rgba(255,255,255,.94); color: #10283a; border: 1px solid rgba(16,40,58,.25); border-radius: 8px;
+  position: absolute; background: rgba(255,255,255,.94); color: #10283a; border: 1px solid rgba(16,40,58,.25); border-radius: 8px;
   padding: 1px 7px; font-size: 12px; font-weight: 600; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis;
-  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  box-shadow: 0 1px 3px rgba(0,0,0,.25); pointer-events: none;
 }
-#cvMap.nolabel .cv-lbl { display: none; }
-.cv-pop { font-size: 12.5px; line-height: 1.5; max-width: 230px; }
-.cv-pop strong { display: block; font-size: 13.5px; margin-bottom: 2px; }
+.cv-pin.major .cv-lbl { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; }
+.cv-pin.minor .cv-lbl, .cv-pin.ov .cv-lbl { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 5px; }
+.cv-pin.minor .cv-lbl { font-size: 11px; font-weight: 400; }
+.cv-fig { position: relative; display: block; width: 46px; height: 46px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+.cv-fig svg { display: block; width: 100%; height: 100%; }
+.cv-fig .cv-num.sm { position: absolute; left: -7px; top: -5px; }
+.cv-fig.lst { flex: none; width: 40px; height: 40px; filter: none; }
+.cv-num.sm { width: 20px; height: 20px; font-size: 11px; border-width: 1.5px; }
+.cv-pin.minor .cv-num.sm { position: absolute; left: 0; top: 0; }
+#cvMap.nolabel .cv-pin:not(.ov) .cv-lbl, #cvMap.nominor .cv-pin.minor .cv-lbl { display: none; }
+.cv-kind { display: inline-block; margin: 0 0 3px; padding: 0 8px; border-radius: 999px; background: rgba(16,40,58,.09); font-size: 11.5px; font-weight: 600; }
+.cv-photo { width: 100%; height: 150px; margin: 6px 0; border-radius: 8px; background: #e8eef4; object-fit: cover; display: flex; align-items: center; justify-content: center; text-align: center; color: #47617a; font-size: 12px; }
+.cv-desc { margin: 4px 0 0; font-size: 12px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.cv-desc:empty { display: none; }
+.cv-btns { display: flex; align-items: center; gap: 10px; }
+.cv-btns a { margin-top: 6px; font-size: 12px; font-weight: 600; color: #1d5fd1; text-decoration: none; }
+.cv-pop { font-size: 12.5px; line-height: 1.5; color: #10283a; }
+.cv-pop strong { display: block; font-size: 14px; margin-bottom: 2px; }
 .cv-pop button { margin-top: 6px; cursor: pointer; border: 1px solid rgba(16,40,58,.25); background: #fff; color: #10283a; border-radius: 8px; padding: 3px 9px; font-size: 12px; font-weight: 600; }
 .cv-empty { font-size: 13px; color: var(--ink-2); padding: 10px 2px; margin: 0; }
 
@@ -2629,7 +2644,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     const byKey = new Map();
     stops.forEach((st) => {
       let pl = byKey.get(st.key);
-      if (!pl) { pl = { key: st.key, place: st.place, name: st.name, visits: [], num: 0 }; byKey.set(st.key, pl); }
+      if (!pl) { pl = { key: st.key, place: st.place, name: st.name, kind: placeKind(st.name), visits: [], num: 0 }; byKey.set(st.key, pl); }
       const v = { day: st.arrDay, when: stopWhenText(st), memo: st.memo || '' };
       if (!pl.visits.some((x) => x.day === v.day && x.when === v.when)) pl.visits.push(v);
     });
@@ -2716,22 +2731,140 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     renderCityMap();
   }
 
-  function pinIcon(num, color, name) {
-    const el = document.createElement('div'); el.className = 'cv-pin';
-    const b = document.createElement('span'); b.className = 'cv-num'; b.textContent = num; b.style.background = color;
-    const l = document.createElement('span'); l.className = 'cv-lbl'; l.textContent = name;
-    el.append(b, l);
-    return LF.divIcon({ html: el, className: 'cv-icon', iconSize: null, iconAnchor: [13, 13] });
+  // ---------- 장소 종류 → 캐릭터 일러스트 ----------
+  // 이름에서 종류를 짐작한다. 역·공항·숙소·식당은 작은 점(minor), 나머지 명소는 큰 캐릭터(major)로 보여준다.
+  const svgWrap = (inner) => `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><g stroke="#1d2b38" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">${inner}</g></svg>`;
+  const face = (x, y, s = 1) => `<circle cx="${x - 4 * s}" cy="${y}" r="${1.5 * s}" fill="#1d2b38" stroke="none"/><circle cx="${x + 4 * s}" cy="${y}" r="${1.5 * s}" fill="#1d2b38" stroke="none"/><path d="M${x - 3 * s} ${y + 3.5 * s} Q${x} ${y + 6.5 * s} ${x + 3 * s} ${y + 3.5 * s}" fill="none" stroke-width="1.5"/><circle cx="${x - 7 * s}" cy="${y + 3 * s}" r="${1.7 * s}" fill="#ff8fa3" stroke="none" opacity=".7"/><circle cx="${x + 7 * s}" cy="${y + 3 * s}" r="${1.7 * s}" fill="#ff8fa3" stroke="none" opacity=".7"/>`;
+  const KINDS = {
+    museum: { ko: '박물관·미술관', major: true, svg: svgWrap(`<path d="M4 20 L24 6 L44 20 Z" fill="#e07a5f"/><rect x="7" y="20" width="34" height="18" fill="#f6ead0"/><rect x="9" y="20" width="4" height="18" fill="#fff"/><rect x="35" y="20" width="4" height="18" fill="#fff"/><rect x="4" y="38" width="40" height="5" rx="1" fill="#d9c9a3"/>${face(24, 28)}`) },
+    castle: { ko: '궁전·성', major: true, svg: svgWrap(`<rect x="5" y="17" width="9" height="25" fill="#c9c1af"/><rect x="34" y="17" width="9" height="25" fill="#c9c1af"/><rect x="14" y="25" width="20" height="17" fill="#ddd6c6"/><path d="M3 17 L9.5 5 L16 17 Z" fill="#e07a5f"/><path d="M32 17 L38.5 5 L45 17 Z" fill="#e07a5f"/><rect x="3" y="42" width="42" height="3" rx="1" fill="#b5ad9b"/>${face(24, 32)}`) },
+    stadium: { ko: '경기장', major: true, svg: svgWrap(`<path d="M6 25 V9 M42 25 V9" fill="none"/><rect x="3" y="5" width="7" height="5" fill="#ffe08a"/><rect x="38" y="5" width="7" height="5" fill="#ffe08a"/><ellipse cx="24" cy="30" rx="21" ry="13" fill="#cfd8e3"/><ellipse cx="24" cy="30" rx="15" ry="8.5" fill="#5fb85f"/>${face(24, 28)}`) },
+    tower: { ko: '타워·전망대', major: true, svg: svgWrap(`<path d="M24 2 L16 13 H32 Z" fill="#6b8fb5"/><rect x="16" y="13" width="16" height="30" fill="#e3c98f"/><circle cx="24" cy="20" r="5" fill="#fff"/><path d="M24 20 V16.5 M24 20 L26.5 21.5" fill="none" stroke-width="1.4"/><rect x="13" y="43" width="22" height="4" rx="1" fill="#b89a5c"/>${face(24, 32, 0.9)}`) },
+    bridge: { ko: '다리', major: true, svg: svgWrap(`<rect x="9" y="10" width="7" height="30" fill="#8fb3d9"/><rect x="32" y="10" width="7" height="30" fill="#8fb3d9"/><path d="M12.5 10 Q24 24 35.5 10" fill="none"/><rect x="2" y="34" width="44" height="6" rx="1.5" fill="#c98a5b"/><path d="M2 45 q4 -3 8 0 t8 0 t8 0 t8 0 t8 0 t4 0" fill="none" stroke="#4c8dff"/>${face(24, 22, 0.9)}`) },
+    church: { ko: '성당·사원', major: true, svg: svgWrap(`<path d="M24 2 L19 11 H29 Z" fill="#6b7fa8"/><rect x="19" y="11" width="10" height="13" fill="#efe3cf"/><rect x="8" y="24" width="32" height="19" fill="#efe3cf"/><path d="M22.5 43 V38 Q24 35 25.5 38 V43" fill="#c9b48f"/>${face(24, 29)}`) },
+    park: { ko: '공원·자연', major: true, svg: svgWrap(`<ellipse cx="24" cy="44" rx="16" ry="3" fill="#8bcf7d"/><rect x="21" y="33" width="6" height="11" fill="#8b5a2b"/><circle cx="15" cy="25" r="10" fill="#5fb85f"/><circle cx="33" cy="25" r="10" fill="#5fb85f"/><circle cx="24" cy="18" r="12" fill="#6cc070"/><circle cx="15" cy="25" r="9.2" fill="#5fb85f" stroke="none"/><circle cx="33" cy="25" r="9.2" fill="#5fb85f" stroke="none"/><circle cx="24" cy="18" r="11.2" fill="#6cc070" stroke="none"/>${face(24, 21)}`) },
+    market: { ko: '시장·거리', major: true, svg: svgWrap(`<rect x="7" y="22" width="34" height="20" fill="#f0c987"/><rect x="6" y="10" width="36" height="12" fill="#fff"/><rect x="6" y="10" width="6" height="12" fill="#e5484d" stroke="none"/><rect x="18" y="10" width="6" height="12" fill="#e5484d" stroke="none"/><rect x="30" y="10" width="6" height="12" fill="#e5484d" stroke="none"/><rect x="6" y="10" width="36" height="12" fill="none"/>${face(24, 31, 0.95)}`) },
+    square: { ko: '광장', major: true, svg: svgWrap(`<ellipse cx="24" cy="38" rx="20" ry="7" fill="#cfd8e3"/><ellipse cx="24" cy="36" rx="16" ry="4.5" fill="#8fd0ff"/><path d="M24 20 V6 M24 20 Q14 8 10 21 M24 20 Q34 8 38 21" fill="none" stroke="#4c8dff"/><rect x="19" y="20" width="10" height="16" fill="#cfd8e3"/>${face(24, 27, 0.7)}`) },
+    studio: { ko: '스튜디오·공연', major: true, svg: svgWrap(`<rect x="6" y="18" width="36" height="24" rx="2" fill="#ffd166"/><rect x="6" y="10" width="36" height="8" fill="#1d2b38"/><path d="M10 10 h5 l-4 8 h-5 z M22 10 h5 l-4 8 h-5 z M34 10 h5 l-4 8 h-5 z" fill="#fff" stroke="none"/>${face(24, 30)}`) },
+    wheel: { ko: '관람차', major: true, svg: svgWrap(`<path d="M14 45 L24 26 L34 45" fill="none"/><circle cx="24" cy="22" r="16" fill="#d8ecff"/><path d="M24 6 V38 M8 22 H40 M12.7 10.7 L35.3 33.3 M35.3 10.7 L12.7 33.3" fill="none" stroke-width="1"/><g fill="#ff8fa3" stroke-width="1.2"><circle cx="24" cy="6" r="2.2"/><circle cx="24" cy="38" r="2.2"/><circle cx="8" cy="22" r="2.2"/><circle cx="40" cy="22" r="2.2"/><circle cx="12.7" cy="10.7" r="2.2"/><circle cx="35.3" cy="33.3" r="2.2"/><circle cx="35.3" cy="10.7" r="2.2"/><circle cx="12.7" cy="33.3" r="2.2"/></g><circle cx="24" cy="22" r="8" fill="#fff"/>${face(24, 20, 0.75)}`) },
+    landmark: { ko: '명소', major: true, svg: svgWrap(`<path d="M24 3 L30 12 L29 40 H19 L18 12 Z" fill="#dfe6ee"/><rect x="14" y="40" width="20" height="6" rx="1" fill="#b8c4d2"/>${face(24, 26, 0.85)}`) },
+    station: { ko: '역·정류장', major: false, emoji: '🚉' },
+    airport: { ko: '공항', major: false, emoji: '✈️' },
+    hotel: { ko: '숙소', major: false, emoji: '🏨' },
+    food: { ko: '식당·카페', major: false, emoji: '🍴' },
+  };
+  // 앞에서부터 맞는 첫 종류를 쓴다(역·공항·숙소·식당을 먼저 가려내야 '박물관역'이 박물관이 되지 않는다)
+  const KIND_RULES = [
+    ['airport', /공항|airport|(^|\s)t\d(\s|$)/i],
+    ['station', /(역|정거장|정류장|터미널|station|terminal)\s*(\d+\S*)?$/i],
+    ['hotel', /호텔|숙소|호스텔|게스트하우스|리조트|에어비앤비|hotel|hostel|resort|airbnb|b&b/i],
+    ['food', /식당|레스토랑|카페|맛집|펍|베이커리|디저트|restaurant|cafe|coffee|bakery|(^|\s)(bar|pub)(\s|$)/i],
+    ['museum', /박물관|미술관|갤러리|전시|도서관|museum|gallery|library/i],
+    ['church', /성당|교회|사원|수도원|사찰|모스크|성전|사그라다|cathedral|church|abbey|basilica|mosque|temple|shrine/i],
+    ['stadium', /경기장|스타디움|아레나|구장|안필드|올드\s*트래포드|캄\s*누|베르나베우|stadium|arena|anfield|old\s*trafford|camp\s*nou|bernab/i],
+    ['bridge', /다리|대교|브리지|브릿지|bridge/i],
+    ['station', /정션|junction|판크라스|pancras|패딩턴|paddington|유스턴|euston|킹스\s*크로스|kings?\s*cross|워털루|waterloo|중앙역|본역/i],
+    ['wheel', /관람차|런던\s*아이|london\s*eye|ferris/i],
+    ['castle', /궁전|궁$|성벽|(^|[^가-힣])성$|캐슬|castle|palace|fortress/i],
+    ['tower', /타워|탑$|탑\s|전망대|빅\s*벤|시계탑|첨탑|tower|big\s*ben|observatory/i],
+    ['studio', /스튜디오|영화|시네마|극장|오페라|공연|뮤지컬|studio|cinema|theat(er|re)|opera/i],
+    ['square', /광장|플라자|서커스|square|plaza|circus/i],
+    ['market', /시장|마켓|거리$|쇼핑|몰$|아울렛|캠던|소호|코벤트|market|street$|mall|outlet|covent|camden|soho/i],
+    ['park', /공원|파크|정원|가든|숲|해변|비치|호수|강변|트로카데로|park|garden|beach|lake|forest/i],
+  ];
+  function placeKind(name) {
+    const n = String(name || '').trim();
+    for (const [id, re] of KIND_RULES) if (re.test(n)) return id;
+    return 'landmark';
   }
-  function popupFor(pl) {
+
+  // ---------- 장소 실제 사진 ----------
+  // 위키백과 문서의 대표 사진을 쓰고, 이름으로 못 찾으면 그 좌표 근처 문서의 사진을 쓴다.
+  async function fetchNearbyPhoto(p) {
+    const key = `geo:${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
+    if (Object.prototype.hasOwnProperty.call(wikiCache, key)) return wikiCache[key];
+    const errBefore = wikiNetErr;
+    let info = null;
+    const url = `https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=geosearch&ggscoord=${p.lat}%7C${p.lng}&ggsradius=400&ggslimit=10&prop=pageimages%7Cextracts&piprop=thumbnail&pithumbsize=640&exintro=1&explaintext=1&exsentences=2`;
+    const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      if (!res.ok) wikiNetErr++;
+      else {
+        const j = await res.json();
+        const pages = Object.values((j.query && j.query.pages) || {}).filter((x) => x.thumbnail).sort((a, b) => a.index - b.index);
+        const hit = pages[0];
+        if (hit) info = { title: hit.title, extract: hit.extract || '', image: hit.thumbnail.source, pageUrl: `https://en.wikipedia.org/?curid=${hit.pageid}` };
+      }
+    } catch (e) { wikiNetErr++; } finally { clearTimeout(to); }
+    if (info || wikiNetErr === errBefore) { wikiCache[key] = info; saveWiki(); }
+    return info;
+  }
+  async function getPlacePhoto(place) {
+    const info = await fetchPlaceInfo(place.name);
+    if (info && info.image) return info;
+    const near = await fetchNearbyPhoto(place);
+    if (!near) return info;
+    return info ? Object.assign({}, info, { image: near.image }) : near;
+  }
+
+  function pinIcon(num, color, name, kindId) {
+    const K = KINDS[kindId];
+    const el = document.createElement('div');
+    const l = document.createElement('span'); l.className = 'cv-lbl';
+    const n = document.createElement('span'); n.className = 'cv-num'; n.textContent = num; n.style.background = color;
+    if (K && K.major) {
+      el.className = 'cv-pin major';
+      const fig = document.createElement('span'); fig.className = 'cv-fig'; fig.innerHTML = K.svg;
+      n.classList.add('sm'); fig.appendChild(n);
+      l.textContent = name; el.append(fig, l);
+      return LF.divIcon({ html: el, className: 'cv-icon', iconSize: [46, 46], iconAnchor: [23, 23] });
+    }
+    if (K) { el.className = 'cv-pin minor'; n.classList.add('sm'); l.textContent = `${K.emoji} ${name}`; } // 역·공항·숙소·식당
+    else { el.className = 'cv-pin ov'; l.textContent = name; }                                             // 도시 전체 보기의 도시 핀
+    el.append(n, l);
+    const sz = K ? 20 : 26;
+    return LF.divIcon({ html: el, className: 'cv-icon', iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2] });
+  }
+  // 목록 왼쪽 그림: 큰 명소는 캐릭터, 그 외는 번호 뱃지
+  function listFig(pl) {
+    const K = KINDS[pl.kind];
+    const n = document.createElement('span'); n.className = 'cv-num'; n.textContent = pl.num; n.style.background = dayColor(pl.visits[0].day);
+    if (!K.major) return n;
+    const fig = document.createElement('span'); fig.className = 'cv-fig lst'; fig.innerHTML = K.svg;
+    n.classList.add('sm'); fig.appendChild(n);
+    return fig;
+  }
+  function popupFor(pl, layer) {
+    const K = KINDS[pl.kind];
     const box = document.createElement('div'); box.className = 'cv-pop';
     const h = document.createElement('strong'); h.textContent = `${pl.num}. ${pl.name}`; box.appendChild(h);
+    const kd = document.createElement('div'); kd.className = 'cv-kind'; kd.textContent = K.ko; box.appendChild(kd);
     pl.visits.forEach((v) => {
       const p = document.createElement('div'); p.textContent = `${v.day}일차 · ${v.when}${v.memo ? ` — ${v.memo}` : ''}`; box.appendChild(p);
     });
-    const b = document.createElement('button'); b.type = 'button'; b.textContent = '📖 설명·사진 보기';
-    b.addEventListener('click', () => openPlaceInfo(pl.place));
-    box.appendChild(b);
+    const photo = document.createElement('div'); photo.className = 'cv-photo'; photo.textContent = '📷 사진 찾는 중…'; box.appendChild(photo);
+    const txt = document.createElement('p'); txt.className = 'cv-desc'; box.appendChild(txt);
+    const row = document.createElement('div'); row.className = 'cv-btns';
+    const more = document.createElement('button'); more.type = 'button'; more.textContent = '📖 자세히 보기';
+    more.addEventListener('click', () => openPlaceInfo(pl.place));
+    row.appendChild(more); box.appendChild(row);
+    const refresh = () => { const pop = layer && layer.getPopup && layer.getPopup(); if (pop && pop.isOpen()) pop.update(); };
+    getPlacePhoto(pl.place).then((info) => {
+      if (info && info.image) {
+        const img = document.createElement('img'); img.className = 'cv-photo'; img.alt = `${pl.name} 사진`; img.loading = 'lazy';
+        img.addEventListener('load', refresh);
+        img.addEventListener('error', () => { photo.textContent = '사진을 불러오지 못했어요.'; img.replaceWith(photo); refresh(); });
+        img.src = info.image;
+        photo.replaceWith(img);
+      } else photo.textContent = '이 장소의 사진을 찾지 못했어요.';
+      if (info && info.extract) txt.textContent = info.extract;
+      if (info && info.pageUrl) {
+        const a = document.createElement('a'); a.href = info.pageUrl; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = '위키백과 ↗';
+        row.appendChild(a);
+      }
+      refresh();
+    }).catch(() => { photo.textContent = '이 장소의 사진을 찾지 못했어요.'; });
     return box;
   }
   function ensureCityMap() {
@@ -2739,14 +2872,23 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     cv.map = LF.map('cvMap', { zoomSnap: 0.25, minZoom: 2, maxZoom: 19 });
     LF.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: OSM_ATTR }).addTo(cv.map);
     cv.layer = LF.layerGroup().addTo(cv.map);
-    cv.labels = () => $('#cvMap').classList.toggle('nolabel', cv.map.getZoom() < 10.5);
+    cv.labels = () => { const z = cv.map.getZoom(), el = $('#cvMap'); el.classList.toggle('nolabel', z < 10.5); el.classList.toggle('nominor', z < 13.5); };
     cv.map.on('zoomend', cv.labels);
     cv.map.setView([30, 10], 2);
   }
   function fitCity(latlngs, maxZoom) {
     if (!latlngs.length) return;
-    cv.map.fitBounds(LF.latLngBounds(latlngs), { paddingTopLeft: [40, 40], paddingBottomRight: [70, 40], maxZoom, animate: false });
+    cv.map.fitBounds(LF.latLngBounds(latlngs), { paddingTopLeft: [60, 60], paddingBottomRight: [90, 80], maxZoom, animate: false });
     cv.labels();
+  }
+
+  // 도시에서 멀리 떨어진 외곽 장소(예: 런던 시내 + 왓포드 스튜디오)가 있으면 처음엔 도심에 맞춰 확대한다
+  function coreOf(places) {
+    if (places.length < 4) return places;
+    const med = (a) => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
+    const m = { lat: med(places.map((p) => p.place.lat)), lng: med(places.map((p) => p.place.lng)) };
+    const core = places.filter((p) => L.haversine(m, p.place) <= 15);
+    return core.length >= 2 ? core : places;
   }
 
   function renderCityMap() {
@@ -2772,8 +2914,9 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     }
     // 장소 핀(번호는 방문 순서, 색은 처음 가는 일차)
     c.places.forEach((pl) => {
-      const m = LF.marker([pl.place.lat, pl.place.lng], { icon: pinIcon(pl.num, dayColor(pl.visits[0].day), pl.name), keyboard: true, title: pl.name, riseOnHover: true })
-        .bindPopup(() => popupFor(pl), { offset: [0, -6] }).addTo(cv.layer);
+      const major = KINDS[pl.kind].major;
+      const m = LF.marker([pl.place.lat, pl.place.lng], { icon: pinIcon(pl.num, dayColor(pl.visits[0].day), pl.name, pl.kind), keyboard: true, title: pl.name, riseOnHover: true, zIndexOffset: major ? 300 : 0 })
+        .bindPopup((layer) => layer._cvBox || (layer._cvBox = popupFor(pl, layer)), { minWidth: 250, maxWidth: 290, offset: [0, major ? -16 : -4] }).addTo(cv.layer);
       m.on('click', () => highlight(pl.key));
       cv.markers.set(pl.key, m);
     });
@@ -2787,12 +2930,18 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     head.append(t, fit);
     days.forEach((d) => { const s = document.createElement('span'); s.className = 'cv-day'; const i = document.createElement('i'); i.style.background = dayColor(d); s.append(i, `${d}일차`); head.appendChild(s); });
     cvList.appendChild(head);
+    const core = coreOf(c.places);
+    if (core.length < c.places.length) {
+      const hint = document.createElement('p'); hint.className = 'cv-empty';
+      hint.textContent = `도심에서 먼 ${c.places.length - core.length}곳은 지도 밖에 있어요. 목록에서 누르거나 '모두 보기'로 확인하세요.`;
+      cvList.appendChild(hint);
+    }
     c.places.forEach((pl) => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'cv-item'; b.dataset.key = pl.key;
-      const n = document.createElement('span'); n.className = 'cv-num'; n.textContent = pl.num; n.style.background = dayColor(pl.visits[0].day);
+      const n = listFig(pl);
       const box = document.createElement('div'); box.className = 't';
       const nm = document.createElement('b'); nm.textContent = pl.name;
-      const when = document.createElement('span'); when.textContent = pl.visits.map((v) => `${v.day}일차 ${v.when}`).join(' · ');
+      const when = document.createElement('span'); when.textContent = `${KINDS[pl.kind].ko} · ` + pl.visits.map((v) => `${v.day}일차 ${v.when}`).join(' · ');
       box.append(nm, when);
       const memo = pl.visits.map((v) => v.memo).find(Boolean);
       if (memo) { const mm = document.createElement('span'); mm.textContent = memo; box.appendChild(mm); }
@@ -2804,7 +2953,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       });
       cvList.appendChild(b);
     });
-    fitCity(c.places.map((p) => [p.place.lat, p.place.lng]), 16);
+    fitCity(core.map((p) => [p.place.lat, p.place.lng]), 16);
   }
   function highlight(key) {
     cvList.querySelectorAll('.cv-item').forEach((b) => {
@@ -2821,7 +2970,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     const pts = [];
     vis.forEach((c) => {
       pts.push(...c.places.map((p) => [p.place.lat, p.place.lng]));
-      const m = LF.marker([c.center.lat, c.center.lng], { icon: pinIcon(c.places.length, theme.accent, c.name), title: c.name }).addTo(cv.layer);
+      const m = LF.marker([c.center.lat, c.center.lng], { icon: pinIcon(c.places.length, theme.accent, c.name, null), title: c.name }).addTo(cv.layer);
       m.on('click', () => selectCity(c.id));
       const b = document.createElement('button'); b.type = 'button'; b.className = 'cv-item';
       const n = document.createElement('span'); n.className = 'cv-num'; n.textContent = c.places.length; n.style.background = theme.accent;
