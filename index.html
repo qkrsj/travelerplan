@@ -277,7 +277,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .cv-chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 .cv-chip[aria-pressed="true"] small { color: inherit; opacity: .85; }
 .cv-body { flex: 1; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
-#cvMap { flex: 1 1 62%; min-height: 0; background: #e6e2da; font-family: var(--body); }
+#cvMap { flex: 1 1 62%; min-height: 0; background: #fdf5df; font-family: var(--body); }
 #cvList { flex: 0 0 38%; overflow-y: auto; overscroll-behavior: contain; padding: 8px 10px 14px; }
 @media (min-width: 820px) {
   .cv-body { flex-direction: row; }
@@ -304,17 +304,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .cv-img { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .cv-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cv-img .cv-fbe { font-size: 34px; }
-.cv-thumb .cv-num { position: absolute; left: 6px; top: 6px; }
+.cv-thumb .cv-dot { position: absolute; left: 7px; top: 7px; }
 .cv-item .t { padding: 6px 8px 8px; min-width: 0; }
 .cv-item .t b { display: block; font-size: 13px; line-height: 1.3; }
 .cv-item .t span { display: block; font-size: 11.5px; color: var(--ink-2); line-height: 1.4; margin-top: 1px; }
 
-/* 번호 뱃지 */
-.cv-num {
-  flex: none; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
-  color: #fff; font-weight: 700; font-size: 12.5px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45);
-}
-.cv-num.sm { width: 22px; height: 22px; font-size: 11.5px; border-width: 1.5px; }
+/* 일차 색 점(카드용) */
+.cv-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 
 /* 지도 위 사진 핀: 동그란 사진 + 아래 뾰족한 끝이 실제 위치를 가리킨다(끝이 좌표) */
 .cv-mk { width: 64px; height: 76px; cursor: pointer; }
@@ -329,12 +325,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .cv-tip { position: absolute; left: 50%; top: 58px; width: 14px; height: 14px; margin-left: -7px; transform: rotate(45deg); border-radius: 0 0 3px 0; box-shadow: 2px 2px 4px rgba(0,0,0,.35); }
 .cv-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cv-fbe { font-size: 28px; line-height: 1; }
-.cv-pbody .cv-num { position: absolute; left: -7px; top: -5px; z-index: 2; }
+.cv-shadow { position: absolute; left: 50%; bottom: -3px; width: 30px; height: 9px; margin-left: -15px; border-radius: 50%; background: rgba(60, 40, 90, .28); filter: blur(1.5px); }
 .cv-lbl {
   position: absolute; z-index: 2; pointer-events: none;
-  background: rgba(255,255,255,.96); color: #10283a; border: 1px solid rgba(16,40,58,.25); border-radius: 8px;
-  padding: 1px 8px; font-size: 12.5px; font-weight: 700; white-space: nowrap; max-width: 190px; overflow: hidden; text-overflow: ellipsis;
-  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  background: #fff; color: #3b2f6b; border: 2px solid #fff; border-radius: 999px;
+  padding: 1px 10px; font-size: 12.5px; font-weight: 800; white-space: nowrap; max-width: 190px; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 2px 6px rgba(60, 40, 90, .35);
 }
 /* 핀이 --ps 배율로 줄어도(끝을 기준으로 줄어든다) 이름표가 핀 가장자리에 붙도록 같은 배율로 자리를 계산 */
 .cv-lbl, .cv-lbl[data-pos="b"] { top: 100%; left: 50%; bottom: auto; right: auto; transform: translateX(-50%); margin: 3px 0 0; }
@@ -2957,9 +2953,9 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     }
   }
   const PIN = 64, PINH = 76; // 사진 지름 / 끝까지의 높이
-  const placePin = (pl) => ({ num: pl.num, color: dayColor(pl.visits[0].day), name: pl.name, K: KINDS[pl.kind], photo: pl.photo });
-  const cityPin = (c) => ({ num: c.places.length, color: theme.accent, name: c.name, K: KINDS.landmark, photo: c.places[0].photo });
-  // o: { num, color, name, K:{emoji,color}, photo }. 지도가 바깥 요소(.cv-mk)의 위치를 옮기므로 그림은 안쪽(.cv-pin)에 둔다. 핀 끝(아래 가운데)이 좌표
+  const placePin = (pl) => ({ color: dayColor(pl.visits[0].day), name: pl.name, K: KINDS[pl.kind], photo: pl.photo });
+  const cityPin = (c) => ({ color: theme.accent, name: c.name, K: KINDS.landmark, photo: c.places[0].photo });
+  // o: { color, name, K:{emoji,color}, photo }. 지도가 바깥 요소(.cv-mk)의 위치를 옮기므로 그림은 안쪽(.cv-pin)에 둔다. 핀 끝(아래 가운데)이 좌표
   function makePin(o, idx) {
     const el = document.createElement('div'); el.className = 'cv-mk';
     const pin = document.createElement('div'); pin.className = 'cv-pin';
@@ -2967,8 +2963,8 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     const card = document.createElement('div'); card.className = 'cv-card'; card.style.borderColor = o.color;
     fillPhoto(card, o.name, o.photo, o.K);
     const tip = document.createElement('span'); tip.className = 'cv-tip'; tip.style.background = o.color; // 아래 뾰족한 끝이 실제 위치
-    const n = document.createElement('span'); n.className = 'cv-num sm'; n.textContent = o.num; n.style.background = o.color;
-    body.append(tip, card, n);
+    const sh = document.createElement('span'); sh.className = 'cv-shadow'; // 바닥 그림자
+    body.append(sh, tip, card);
     const l = document.createElement('span'); l.className = 'cv-lbl'; l.textContent = o.name;
     pin.append(body, l); el.appendChild(pin);
     el.title = o.name;
@@ -3008,7 +3004,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   function popupFor(pl) {
     const K = KINDS[pl.kind];
     const box = document.createElement('div'); box.className = 'cv-pop';
-    const h = document.createElement('strong'); h.textContent = `${pl.num}. ${pl.name}`; box.appendChild(h);
+    const h = document.createElement('strong'); h.textContent = pl.name; box.appendChild(h);
     const kd = document.createElement('div'); kd.className = 'cv-kind'; kd.textContent = `${K.emoji} ${K.ko}`; box.appendChild(kd);
     pl.visits.forEach((v) => {
       const p = document.createElement('div'); p.textContent = `${v.day}일차 · ${v.when}${v.memo ? ` — ${v.memo}` : ''}`; box.appendChild(p);
@@ -3053,7 +3049,6 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   }
 
   // ---------- 지도 (MapLibre: 자세한 3D 건물 지도 + 카메라 이동 애니메이션) ----------
-  const OFM_SIMPLE = 'https://tiles.openfreemap.org/styles/positron'; // 색·글자를 줄인 간단한 지도(핀이 잘 보이도록)
   const OFM_3D = 'https://tiles.openfreemap.org/styles/liberty'; // 3D 건물이 있는 지도(메인 지도의 3D 보기용)
   const RASTER_STYLE = { version: 8, sources: { osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19, attribution: OSM_ATTR } }, layers: [{ id: 'osm', type: 'raster', source: 'osm' }] };
   const EMPTY_FC = { type: 'FeatureCollection', features: [] };
@@ -3065,18 +3060,65 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     });
     return style;
   }
-  // 도시별 지도용: 건물·철도·도로 번호판·작은 길 이름·공항 표시를 빼서 장소와 위치가 눈에 띄게 한다
-  const SIMPLE_DROP = /^(building|railway|highway-shield|road_shield|highway-name-(path|minor)|airport|aeroway|waterway_line_label|water_name_line_label|boundary_3|highway_path)/;
-  function simpleStyle(style) {
-    style.layers = style.layers.filter((ly) => !SIMPLE_DROP.test(ly.id));
-    return englishStyle(style);
+  // ---------- 도시별 지도용 '게임 지도' 스타일 ----------
+  // OpenFreeMap 벡터 타일(OpenMapTiles 구조)에 직접 만든 밝은 만화풍 색을 입힌다: 하늘색 물, 연두 공원, 크림색 땅, 하얀·노란 도로, 파스텔 건물, 굵고 큰 지명.
+  // 작은 길 이름·철도·상점 아이콘은 넣지 않아서 내가 갈 장소만 눈에 띈다.
+  const G = {
+    land: '#fdf5df', res: '#fbeccd', grass: '#c9f0a5', park: '#a9e88f', wood: '#8fdc86', sand: '#fde9a6', water: '#7ed3ff', river: '#7ed3ff',
+    school: '#ffe1ec', hospital: '#ffdada', special: '#ece0ff', building: '#ffd9c4', buildingEdge: '#f2b494',
+    road: '#ffffff', roadEdge: '#ecdcb6', main: '#fff0a8', mainEdge: '#f1c95a', motor: '#ffcf7a', motorEdge: '#eb9d3d',
+    ink: '#4a3f7a', halo: '#ffffff', waterInk: '#2f96d6',
+  };
+  function gameStyle() {
+    const Zm = ['zoom'];
+    const cls = (...c) => ['match', ['get', 'class'], c, true, false];
+    const wide = (stops, add) => ['interpolate', ['exponential', 1.4], Zm, ...stops.flatMap(([z, w]) => [z, w + (add || 0)])];
+    const notTunnel = ['!=', ['get', 'brunnel'], 'tunnel'];
+    const src = 'openmaptiles';
+    const road = (id, classes, minzoom, stops, fill, edge) => [
+      { id: id + '-edge', type: 'line', source: src, 'source-layer': 'transportation', minzoom, filter: ['all', cls(...classes), notTunnel], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': edge, 'line-width': wide(stops, 2.6) } },
+      { id: id + '-fill', type: 'line', source: src, 'source-layer': 'transportation', minzoom, filter: ['all', cls(...classes), notTunnel], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': fill, 'line-width': wide(stops) } },
+    ];
+    const label = (id, layer, filter, minzoom, size, extra) => ({
+      id, type: 'symbol', source: src, 'source-layer': layer, minzoom, filter,
+      layout: Object.assign({ 'text-field': ENGLISH, 'text-font': ['Noto Sans Bold'], 'text-size': size, 'text-max-width': 7, 'text-padding': 3 }, (extra && extra.layout) || {}),
+      paint: Object.assign({ 'text-color': G.ink, 'text-halo-color': G.halo, 'text-halo-width': 2.4, 'text-halo-blur': 0.4 }, (extra && extra.paint) || {}),
+    });
+    const fillL = (id, layer, filter, color, extra) => Object.assign({ id, type: 'fill', source: src, 'source-layer': layer, paint: { 'fill-color': color } }, filter ? { filter } : {}, extra || {});
+    const layers = [
+      { id: 'bg', type: 'background', paint: { 'background-color': G.land } },
+      fillL('landuse-res', 'landuse', cls('residential', 'suburb', 'neighbourhood', 'commercial', 'retail'), G.res, { minzoom: 9 }),
+      fillL('landcover-sand', 'landcover', cls('sand'), G.sand),
+      fillL('landcover-grass', 'landcover', cls('grass', 'farmland', 'wetland'), G.grass),
+      fillL('landcover-wood', 'landcover', cls('wood', 'forest'), G.wood),
+      fillL('park', 'park', null, G.park),
+      fillL('landuse-green', 'landuse', cls('pitch', 'garden', 'playground', 'cemetery', 'stadium'), G.park, { minzoom: 11 }),
+      fillL('landuse-school', 'landuse', cls('school', 'university', 'kindergarten', 'college'), G.school, { minzoom: 12 }),
+      fillL('landuse-hospital', 'landuse', cls('hospital'), G.hospital, { minzoom: 12 }),
+      fillL('aeroway', 'aeroway', ['==', ['geometry-type'], 'Polygon'], G.special, { minzoom: 9 }),
+      fillL('water', 'water', null, G.water),
+      { id: 'waterway', type: 'line', source: src, 'source-layer': 'waterway', minzoom: 8, layout: { 'line-cap': 'round' }, paint: { 'line-color': G.river, 'line-width': wide([[8, 0.8], [14, 3], [18, 9]]) } },
+      { id: 'building', type: 'fill', source: src, 'source-layer': 'building', minzoom: 13.5, paint: { 'fill-color': G.building, 'fill-outline-color': G.buildingEdge, 'fill-opacity': ['interpolate', ['linear'], Zm, 13.5, 0, 15, 1] } },
+      ...road('minor', ['minor', 'service', 'track'], 14, [[13, 0.6], [15, 2.4], [17, 7], [20, 24]], G.road, G.roadEdge),
+      ...road('mid', ['tertiary', 'secondary'], 10.5, [[10.5, 0.8], [13, 2.2], [15, 5], [17, 11], [20, 34]], G.road, G.roadEdge),
+      ...road('main', ['primary', 'trunk'], 8, [[8, 0.9], [11, 2.2], [14, 5.5], [17, 13], [20, 40]], G.main, G.mainEdge),
+      ...road('motor', ['motorway'], 6, [[6, 1], [10, 2.4], [13, 5], [16, 11], [20, 42]], G.motor, G.motorEdge),
+      label('label-water', 'water_name', ['==', ['geometry-type'], 'Point'], 6, 13, { layout: { 'text-font': ['Noto Sans Italic'] }, paint: { 'text-color': G.waterInk } }),
+      label('label-country', 'place', cls('country'), 2, ['interpolate', ['linear'], Zm, 2, 12, 6, 18], { layout: { 'text-transform': 'uppercase', 'text-letter-spacing': 0.1 } }),
+      label('label-state', 'place', cls('state'), 5, 12, { layout: { 'text-transform': 'uppercase' }, paint: { 'text-color': '#8a7fb8' } }),
+      label('label-city', 'place', cls('city'), 4, ['interpolate', ['exponential', 1.3], Zm, 4, 13, 8, 18, 12, 26]),
+      label('label-town', 'place', cls('town'), 8, ['interpolate', ['linear'], Zm, 8, 12, 13, 18]),
+      label('label-village', 'place', cls('village', 'hamlet'), 11, ['interpolate', ['linear'], Zm, 11, 11, 15, 15], { paint: { 'text-color': '#6f639f' } }),
+      label('label-suburb', 'place', cls('suburb', 'neighbourhood', 'quarter'), 12, ['interpolate', ['linear'], Zm, 12, 11, 16, 16], { paint: { 'text-color': '#8a7fb8' } }),
+    ];
+    return { version: 8, sources: { [src]: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } }, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf', layers };
   }
   // 이동 선을 얹을 레이어(스타일이 바뀌면 다시 만든다)
   function setupRoutes() {
     const m = cv.map;
     if (!m.getSource('cv-routes')) m.addSource('cv-routes', { type: 'geojson', data: cv.routeData || EMPTY_FC });
-    if (!m.getLayer('cv-routes-casing')) m.addLayer({ id: 'cv-routes-casing', type: 'line', source: 'cv-routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 7, 'line-opacity': 0.75 } });
-    if (!m.getLayer('cv-routes-line')) m.addLayer({ id: 'cv-routes-line', type: 'line', source: 'cv-routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 3.5, 'line-dasharray': [0.1, 2] } });
+    if (!m.getLayer('cv-routes-casing')) m.addLayer({ id: 'cv-routes-casing', type: 'line', source: 'cv-routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 0.9 } });
+    if (!m.getLayer('cv-routes-line')) m.addLayer({ id: 'cv-routes-line', type: 'line', source: 'cv-routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 5.5, 'line-dasharray': [0.1, 1.7] } });
   }
   function setRoutes(fc) {
     cv.routeData = fc;
@@ -3109,12 +3151,8 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   // 지도는 스타일을 받은 뒤에 만든다. 만드는 동안 renderCityMap은 '불러오는 중'을 보이고, 만들어지면 다시 그린다.
   async function createCityMap() {
     if (!window.maplibregl) return false;
-    let style = RASTER_STYLE;
-    cv.raster = true;
-    try {
-      const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 8000);
-      try { style = simpleStyle(await (await fetch(OFM_SIMPLE, { signal: ctrl.signal })).json()); cv.raster = false; } finally { clearTimeout(to); }
-    } catch (e) { console.warn('city style failed, using OSM', e && e.message); }
+    const style = gameStyle();
+    cv.raster = false;
     try {
       cv.map = new maplibregl.Map({ container: 'cvMap', style, center: [10, 30], zoom: 1.6, maxPitch: 0, dragRotate: false, attributionControl: false, fadeDuration: 150 });
     } catch (e) { console.warn('city map failed', e && e.message); cv.map = null; return false; }
@@ -3164,8 +3202,8 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'cv-item';
     const th = document.createElement('div'); th.className = 'cv-thumb';
     const img = document.createElement('div'); img.className = 'cv-img';
-    const n = document.createElement('span'); n.className = 'cv-num sm'; n.textContent = o.num; n.style.background = o.color;
-    th.append(img, n);
+    th.appendChild(img);
+    if (o.color) { const d = document.createElement('span'); d.className = 'cv-dot'; d.style.background = o.color; th.appendChild(d); }
     fillPhoto(img, o.name, o.photo, o.K);
     const box = document.createElement('div'); box.className = 't';
     const nm = document.createElement('b'); nm.textContent = o.name;
@@ -3235,7 +3273,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     const cards = new Map();
     c.places.forEach((pl) => {
       const K = KINDS[pl.kind];
-      const b = makeCard({ num: pl.num, color: dayColor(pl.visits[0].day), name: pl.name, K, photo: pl.photo, sub: [`${K.emoji} ${K.ko}`, pl.visits.map((v) => `${v.day}일차 ${v.when}`).join(' · '), pl.visits.map((v) => v.memo).find(Boolean)] });
+      const b = makeCard({ color: dayColor(pl.visits[0].day), name: pl.name, K, photo: pl.photo, sub: [`${K.emoji} ${K.ko}`, pl.visits.map((v) => `${v.day}일차 ${v.when}`).join(' · '), pl.visits.map((v) => v.memo).find(Boolean)] });
       b.dataset.key = pl.key;
       b.addEventListener('click', () => {
         highlight(pl.key);
@@ -3280,7 +3318,7 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
       const m = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([c.center.lng, c.center.lat]).addTo(cv.map);
       cv.markers.set(key, m); cv.items.push({ key });
       const b = makeCard({
-        num: c.places.length, color: theme.accent, name: c.name, K: KINDS.landmark, photo: c.places[0].photo,
+        color: theme.accent, name: c.name, K: KINDS.landmark, photo: c.places[0].photo,
         sub: [c.country || (c.pending ? '나라 확인 중…' : ''), c.places.slice(0, 4).map((p) => p.name).join(', ') + (c.places.length > 4 ? ' 외' : '')],
       });
       b.addEventListener('click', () => selectCity(c.id));
