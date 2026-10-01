@@ -13,7 +13,6 @@
   --sea: #c2dff0;
   --land: #e4efdc;
   --visited: #e11d48;
-  --visited-line: #9a1538;
   --ink: #10283a;
   --ink-2: #47617a;
   --panel: rgba(255, 255, 255, .94);
@@ -26,6 +25,7 @@
   --err: #c0271b;
   --warn: #8a5a00;
   --ok: #17703f;
+  --pub: #0b7dc4;
   --display: 'Jua', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   --body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
 }
@@ -34,7 +34,7 @@
     --sea: #0a2138; --land: #1b4560; --ink: #e8f3fb; --ink-2: #9db8cb;
     --panel: rgba(8, 28, 48, .92); --panel-solid: #0c2a45; --line: rgba(180, 215, 240, .2);
     --field: rgba(160, 200, 235, .1); --accent: #ffd23f; --on-accent: #10283a;
-    --visited: #ffd23f; --visited-line: #caa30f;
+    --visited: #ffd23f; --pub: #5ccbff;
     --focus: #7fb2ff; --err: #ff9a8f; --warn: #ffd27a; --ok: #7be0a5;
   }
 }
@@ -85,11 +85,15 @@ h1 { font-family: var(--display); font-weight: 400; }
 #globeMap { position: absolute; inset: 0; }
 #topbar {
   position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center;
-  gap: 10px; padding: 10px 14px; background: var(--panel); backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--line);
+  gap: 8px; padding: 10px 14px; background: var(--panel); backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line); flex-wrap: wrap;
 }
 #topbar h1 { margin: 0; font-size: 18px; flex: 0 0 auto; }
-#topbar .who { flex: 1 1 auto; font-size: 12.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#backBtn { display: none; }
+#backBtn.show { display: inline-block; }
+#countryLabel { font-weight: 700; font-size: 14px; display: none; }
+#countryLabel.show { display: inline; }
+#topbar .who { flex: 1 1 auto; font-size: 12.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 60px; }
 .btn {
   border: 1px solid var(--line); background: var(--panel-solid); color: var(--ink); border-radius: 9px;
   padding: 8px 12px; font-size: 13px; font-weight: 600;
@@ -99,51 +103,80 @@ h1 { font-family: var(--display); font-weight: 400; }
 #sidePanel {
   position: absolute; top: 58px; right: 0; bottom: 0; width: min(340px, 100vw); z-index: 5;
   background: var(--panel); backdrop-filter: blur(6px); border-left: 1px solid var(--line);
-  overflow-y: auto; padding: 14px; transform: translateX(0); transition: transform .2s;
+  overflow-y: auto; padding: 14px;
 }
-#sidePanel.hidden { transform: translateX(100%); }
 #sidePanel h2 { margin: 0 0 10px; font-size: 15px; }
-#countryList { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-#countryList button {
+#sidePanel .hint { color: var(--ink-2); font-size: 12px; margin: -4px 0 12px; }
+#panelCountry { display: none; }
+#panelCountry.show { display: block; }
+#panelGlobe.hide { display: none; }
+.chipList { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chipList button {
   border: 1px solid var(--line); background: var(--field); border-radius: 999px; padding: 5px 10px; font-size: 12.5px;
+  display: flex; align-items: center; gap: 5px;
 }
-#countryList button.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.chipList button.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.chipList .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--visited); display: inline-block; }
+.muted { color: var(--ink-2); font-size: 12.5px; }
 #entryList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .entry {
   border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: var(--panel-solid);
 }
-.entry .meta { font-size: 11.5px; color: var(--ink-2); margin-bottom: 4px; }
+.entry .meta { font-size: 11.5px; color: var(--ink-2); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.entry .title { font-weight: 700; margin: 0 0 4px; font-size: 13.5px; }
 .entry .text { font-size: 13px; white-space: pre-wrap; margin: 0 0 6px; }
 .entry .photos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
 .entry .photos img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; }
-.entry .del { border: none; background: transparent; color: var(--err); font-size: 11.5px; padding: 2px 0; }
-#emptyNote { color: var(--ink-2); font-size: 12.5px; }
+.entry .rowBtns { display: flex; gap: 10px; flex-wrap: wrap; }
+.entry .rowBtns button, .entry .rowBtns a {
+  border: none; background: transparent; font-size: 11.5px; padding: 2px 0; text-decoration: none; font-weight: 600;
+}
+.entry .del { color: var(--err); }
+.entry .route { color: var(--focus); }
+.entry .visBtn { color: var(--ink-2); }
+.badge { border-radius: 999px; padding: 1px 7px; font-size: 10.5px; font-weight: 700; }
+.badge.pub { background: var(--pub); color: #fff; }
+.badge.priv { background: var(--field); color: var(--ink-2); }
+
+.city-dot {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  cursor: pointer;
+}
+.city-dot.active { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 #fab {
   position: absolute; left: 16px; bottom: 16px; z-index: 5; border: none; border-radius: 999px;
   background: var(--accent); color: var(--on-accent); padding: 14px 18px; font-weight: 700; font-size: 14px;
   box-shadow: 0 6px 18px rgba(0,0,0,.2);
 }
+#exploreBtn { position: absolute; left: 16px; bottom: 68px; z-index: 5; }
 
-#entryModal {
+.modalWrap {
   position: fixed; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center;
   background: rgba(10, 20, 30, .45); padding: 16px;
 }
-#entryModal.on { display: flex; }
-#entryForm {
-  width: min(420px, 100%); max-height: 90vh; overflow-y: auto; background: var(--panel-solid);
+.modalWrap.on { display: flex; }
+.modalCard {
+  width: min(460px, 100%); max-height: 90vh; overflow-y: auto; background: var(--panel-solid);
   border-radius: 16px; padding: 20px;
 }
-#entryForm h2 { margin: 0 0 14px; font-size: 17px; }
+.modalCard h2 { margin: 0 0 14px; font-size: 17px; }
 .field { display: block; margin: 10px 0; }
 .field span { display: block; margin-bottom: 4px; font-size: 12.5px; color: var(--ink-2); }
 .field input, .field select, .field textarea {
   width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--field);
 }
 .field textarea { min-height: 90px; resize: vertical; }
+.radioRow { display: flex; gap: 14px; margin-top: 4px; }
+.radioRow label { display: flex; align-items: center; gap: 5px; font-size: 13px; }
 .modalBtns { display: flex; gap: 8px; margin-top: 16px; }
 .modalBtns .btn { flex: 1; }
-#entryMsg { min-height: 18px; margin-top: 8px; font-size: 12.5px; color: var(--err); }
+.formMsg { min-height: 18px; margin-top: 8px; font-size: 12.5px; color: var(--err); }
+
+#exploreList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; max-height: 70vh; overflow-y: auto; }
+.explore-card { border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.explore-card .where { font-weight: 700; font-size: 13.5px; }
+.explore-card .by { color: var(--ink-2); font-size: 11.5px; }
 
 .photo-view {
   position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center;
@@ -175,36 +208,64 @@ h1 { font-family: var(--display); font-weight: 400; }
 <div id="appScreen">
   <div id="globeMap"></div>
   <div id="topbar">
+    <button class="btn" id="backBtn" type="button">← 지구본</button>
     <h1>🌍 여행 지구본</h1>
+    <span id="countryLabel"></span>
     <span class="who" id="whoEmail"></span>
     <button class="btn" id="logoutBtn">로그아웃</button>
   </div>
   <button id="fab" type="button">＋ 일기 추가</button>
+  <button class="btn" id="exploreBtn" type="button">🌐 둘러보기</button>
   <aside id="sidePanel">
-    <h2>내가 방문한 나라</h2>
-    <ul id="countryList"></ul>
-    <h2 id="entryListTitle">나라를 골라보세요</h2>
-    <ul id="entryList"></ul>
-    <p id="emptyNote" hidden>아직 기록이 없어요. 오른쪽 아래 "＋ 일기 추가"로 시작해 보세요.</p>
+    <div id="panelGlobe">
+      <h2>내가 방문한 나라</h2>
+      <p class="hint">점 색이 진할수록 더 자주 갔어요</p>
+      <ul id="countryList" class="chipList"></ul>
+    </div>
+    <div id="panelCountry">
+      <h2>방문한 도시</h2>
+      <ul id="cityList" class="chipList"></ul>
+      <h2 id="entryListTitle">도시를 골라보세요</h2>
+      <ul id="entryList"></ul>
+    </div>
   </aside>
 </div>
 
-<div id="entryModal">
-  <form id="entryForm">
+<div class="modalWrap" id="entryModal">
+  <form class="modalCard" id="entryForm">
     <h2>✏️ 여행 일기 추가</h2>
     <label class="field"><span>나라</span>
       <select id="fCountry" required></select>
     </label>
-    <label class="field"><span>도시 (선택)</span><input id="fCity" type="text" placeholder="예: 도쿄"></label>
+    <label class="field"><span>도시</span><input id="fCity" type="text" placeholder="예: 도쿄" required></label>
     <label class="field"><span>날짜</span><input id="fDate" type="date" required></label>
-    <label class="field"><span>이야기</span><textarea id="fText" placeholder="오늘 있었던 일을 적어보세요"></textarea></label>
+    <label class="field"><span>제목</span><input id="fTitle" type="text" placeholder="예: 첫날, 아사쿠사 산책"></label>
+    <label class="field"><span>이야기 · 코스 메모</span><textarea id="fText" placeholder="오늘 있었던 일, 들른 곳을 적어보세요"></textarea></label>
     <label class="field"><span>사진 (여러 장 가능)</span><input id="fPhotos" type="file" accept="image/*" multiple></label>
+    <label class="field"><span>공개 설정</span>
+      <div class="radioRow">
+        <label><input type="radio" name="fVis" value="private" checked> 🔒 비공개</label>
+        <label><input type="radio" name="fVis" value="public"> 🌐 공개 (다른 사람도 볼 수 있어요)</label>
+      </div>
+    </label>
     <div class="modalBtns">
       <button type="button" class="btn" id="entryCancel">취소</button>
       <button type="submit" class="btn primary" id="entrySubmit">저장</button>
     </div>
-    <p id="entryMsg"></p>
+    <p class="formMsg" id="entryMsg"></p>
   </form>
+</div>
+
+<div class="modalWrap" id="exploreModal">
+  <div class="modalCard">
+    <h2>🌐 다른 사람들의 공개 기록</h2>
+    <label class="field"><span>나라로 좁혀보기</span>
+      <select id="exploreCountry"><option value="">전체</option></select>
+    </label>
+    <ul id="exploreList"></ul>
+    <p class="muted" id="exploreEmpty" hidden>아직 공개된 기록이 없어요.</p>
+    <div class="modalBtns"><button type="button" class="btn" id="exploreClose">닫기</button></div>
+  </div>
 </div>
 
 <div class="photo-view" id="photoView"><img id="photoViewImg" alt=""></div>
@@ -228,6 +289,7 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.database();
 const storage = firebase.storage();
+const $ = (s, root) => (root || document).querySelector(s);
 
 // ---------- 국가 목록 (alpha-2 코드 / ISO 숫자코드 / 한글 이름) ----------
 // ISO 숫자코드는 지구본에 쓰는 countries-110m.json 폴리곤의 id와 매칭하는 데 쓴다.
@@ -260,8 +322,17 @@ const COUNTRIES = [
 ['TO','776','통가'],['GU','316','괌'],['PW','585','팔라우'],
 ].sort((a,b)=>a[2].localeCompare(b[2],'ko'));
 const COUNTRY_BY_CODE = Object.fromEntries(COUNTRIES.map((c)=>[c[0], c]));
+const ISO_TO_ALPHA2 = Object.fromEntries(COUNTRIES.map((c) => [String(Number(c[1])), c[0]]));
+function koName(code) { return COUNTRY_BY_CODE[code] ? COUNTRY_BY_CODE[code][2] : code; }
 
-const $ = (s) => document.querySelector(s);
+function hexToRgba(hex, a) {
+  const h = hex.replace('#', '');
+  const n = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const r = parseInt(n.slice(0, 2), 16), g = parseInt(n.slice(2, 4), 16), b = parseInt(n.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function levelAlpha(count) { return count >= 4 ? 1 : count >= 2 ? 0.65 : 0.35; }
 
 // ---------- 인증 ----------
 let authMode = 'login';
@@ -307,7 +378,9 @@ $('#logoutBtn').addEventListener('click', () => auth.signOut());
 // ---------- 데이터 ----------
 let uid = null;
 let entries = {}; // id -> entry
+let view = 'globe'; // 'globe' | 'country'
 let activeCountry = null;
+let activeCity = null;
 let entriesRef = null;
 
 auth.onAuthStateChanged((user) => {
@@ -320,100 +393,169 @@ auth.onAuthStateChanged((user) => {
     entriesRef = db.ref(`users/${uid}/entries`);
     entriesRef.on('value', (snap) => {
       entries = snap.val() || {};
-      renderCountryList();
-      renderEntryList();
-      renderGlobeColors();
+      renderAll();
     });
   } else {
-    uid = null; entries = {}; activeCountry = null;
+    uid = null; entries = {}; view = 'globe'; activeCountry = null; activeCity = null;
     if (entriesRef) { entriesRef.off(); entriesRef = null; }
     $('#appScreen').classList.remove('on');
     $('#authScreen').style.display = 'flex';
   }
 });
 
-function visitedCodes() {
-  const set = new Set();
-  Object.values(entries).forEach((e) => { if (e && e.countryCode) set.add(e.countryCode); });
-  return set;
+function entriesOfCountry(code) { return Object.entries(entries).filter(([, e]) => e && e.countryCode === code); }
+function entriesOfCity(code, city) { return entriesOfCountry(code).filter(([, e]) => e.city === city); }
+function countBy(list) { return new Set(list.map(([, e]) => e.date).filter(Boolean)).size || list.length; }
+function countryCounts() {
+  const map = {};
+  COUNTRIES.forEach((c) => { const n = countBy(entriesOfCountry(c[0])); if (n) map[c[0]] = n; });
+  return map;
+}
+function cityCounts(code) {
+  const byCity = {};
+  entriesOfCountry(code).forEach(([, e]) => { (byCity[e.city] = byCity[e.city] || []).push(e); });
+  const out = {};
+  Object.entries(byCity).forEach(([city, list]) => {
+    const withGeo = list.find((e) => e.lat != null && e.lng != null);
+    out[city] = { count: new Set(list.map((e) => e.date).filter(Boolean)).size || list.length, lat: withGeo ? withGeo.lat : null, lng: withGeo ? withGeo.lng : null };
+  });
+  return out;
+}
+
+function renderAll() {
+  renderCountryList();
+  if (view === 'country') { renderCityList(); renderEntryList(); renderCityMarkers(); }
+  renderGlobeColors();
 }
 
 function renderCountryList() {
   const box = $('#countryList'); box.textContent = '';
-  const codes = [...visitedCodes()].sort((a, b) => (COUNTRY_BY_CODE[a]?.[2] || a).localeCompare(COUNTRY_BY_CODE[b]?.[2] || b, 'ko'));
-  if (!codes.length) { box.innerHTML = '<li style="color:var(--ink-2);font-size:12.5px;">아직 기록이 없어요</li>'; return; }
+  const counts = countryCounts();
+  const codes = Object.keys(counts).sort((a, b) => koName(a).localeCompare(koName(b), 'ko'));
+  if (!codes.length) { box.innerHTML = '<li class="muted">아직 기록이 없어요</li>'; return; }
   codes.forEach((code) => {
     const li = document.createElement('li');
     const b = document.createElement('button'); b.type = 'button';
-    b.textContent = COUNTRY_BY_CODE[code] ? COUNTRY_BY_CODE[code][2] : code;
-    if (code === activeCountry) b.classList.add('active');
-    b.addEventListener('click', () => selectCountry(code));
+    const dot = document.createElement('span'); dot.className = 'dot';
+    dot.style.background = hexToRgba(cssVar('--visited'), levelAlpha(counts[code]));
+    b.append(dot, document.createTextNode(`${koName(code)} ×${counts[code]}`));
+    b.addEventListener('click', () => flyToCountry(code));
     li.appendChild(b); box.appendChild(li);
   });
 }
 
-function selectCountry(code) {
-  activeCountry = code;
-  renderCountryList();
-  renderEntryList();
+function renderCityList() {
+  const box = $('#cityList'); box.textContent = '';
+  const counts = cityCounts(activeCountry);
+  const cities = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'ko'));
+  if (!cities.length) { box.innerHTML = '<li class="muted">이 나라엔 아직 도시 기록이 없어요</li>'; return; }
+  cities.forEach((city) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button'); b.type = 'button';
+    if (city === activeCity) b.classList.add('active');
+    const dot = document.createElement('span'); dot.className = 'dot';
+    dot.style.background = hexToRgba(cssVar('--visited'), levelAlpha(counts[city].count));
+    b.append(dot, document.createTextNode(`${city} ×${counts[city].count}`));
+    b.addEventListener('click', () => selectCity(city));
+    li.appendChild(b); box.appendChild(li);
+  });
+}
+
+function selectCity(city) {
+  activeCity = activeCity === city ? null : city;
+  renderCityList(); renderEntryList(); renderCityMarkers();
 }
 
 function renderEntryList() {
   const title = $('#entryListTitle');
   const list = $('#entryList'); list.textContent = '';
-  const empty = $('#emptyNote');
-  if (!activeCountry) {
-    title.textContent = '나라를 골라보세요';
-    empty.hidden = Object.keys(entries).length > 0;
-    return;
-  }
-  title.textContent = `📍 ${COUNTRY_BY_CODE[activeCountry] ? COUNTRY_BY_CODE[activeCountry][2] : activeCountry}`;
-  empty.hidden = true;
-  const rows = Object.entries(entries)
-    .filter(([, e]) => e && e.countryCode === activeCountry)
+  const rows = (activeCity ? entriesOfCity(activeCountry, activeCity) : entriesOfCountry(activeCountry))
     .sort((a, b) => (b[1].date || '').localeCompare(a[1].date || ''));
-  if (!rows.length) { list.innerHTML = '<li style="color:var(--ink-2);font-size:12.5px;">이 나라에는 아직 기록이 없어요</li>'; return; }
-  rows.forEach(([id, e]) => {
-    const li = document.createElement('li'); li.className = 'entry';
-    const meta = document.createElement('div'); meta.className = 'meta';
-    meta.textContent = `${e.date || ''}${e.city ? ' · ' + e.city : ''}`;
-    li.appendChild(meta);
-    if (e.text) { const p = document.createElement('p'); p.className = 'text'; p.textContent = e.text; li.appendChild(p); }
-    if (e.photos && e.photos.length) {
-      const row = document.createElement('div'); row.className = 'photos';
-      e.photos.forEach((url) => {
-        const img = document.createElement('img'); img.src = url; img.alt = '여행 사진';
-        img.addEventListener('click', () => { $('#photoViewImg').src = url; $('#photoView').classList.add('on'); });
-        row.appendChild(img);
-      });
-      li.appendChild(row);
-    }
+  title.textContent = activeCity ? `📍 ${activeCity}` : `${koName(activeCountry)} 전체 기록`;
+  if (!rows.length) { list.innerHTML = '<li class="muted">아직 기록이 없어요. "＋ 일기 추가"로 시작해 보세요.</li>'; return; }
+  rows.forEach(([id, e]) => list.appendChild(entryCard(id, e, true)));
+}
+
+function entryCard(id, e, mine) {
+  const li = document.createElement('li'); li.className = 'entry';
+  const meta = document.createElement('div'); meta.className = 'meta';
+  const badge = document.createElement('span'); badge.className = 'badge ' + (e.visibility === 'public' ? 'pub' : 'priv');
+  badge.textContent = e.visibility === 'public' ? '🌐 공개' : '🔒 비공개';
+  meta.append(`${e.date || ''} · ${e.city || ''}, ${koName(e.countryCode)}`, badge);
+  li.appendChild(meta);
+  if (e.title) { const h = document.createElement('p'); h.className = 'title'; h.textContent = e.title; li.appendChild(h); }
+  if (e.text) { const p = document.createElement('p'); p.className = 'text'; p.textContent = e.text; li.appendChild(p); }
+  if (e.photos && e.photos.length) {
+    const row = document.createElement('div'); row.className = 'photos';
+    e.photos.forEach((url) => {
+      const img = document.createElement('img'); img.src = url; img.alt = '여행 사진'; img.loading = 'lazy';
+      img.addEventListener('click', () => { $('#photoViewImg').src = url; $('#photoView').classList.add('on'); });
+      row.appendChild(img);
+    });
+    li.appendChild(row);
+  }
+  const btns = document.createElement('div'); btns.className = 'rowBtns';
+  const route = document.createElement('a'); route.className = 'route'; route.href = `index.html?room=diary-${id}`; route.target = '_blank'; route.rel = 'noopener';
+  route.textContent = '🧭 코스 기록/보기';
+  btns.appendChild(route);
+  if (mine) {
+    const vis = document.createElement('button'); vis.type = 'button'; vis.className = 'visBtn';
+    vis.textContent = e.visibility === 'public' ? '🔒 비공개로 전환' : '🌐 공개로 전환';
+    vis.addEventListener('click', () => toggleVisibility(id, e));
     const del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.textContent = '🗑 삭제';
-    del.addEventListener('click', () => deleteEntry(id));
-    li.appendChild(del);
-    list.appendChild(li);
-  });
+    del.addEventListener('click', () => deleteEntry(id, e));
+    btns.append(vis, del);
+  }
+  li.appendChild(btns);
+  return li;
 }
 $('#photoView').addEventListener('click', () => $('#photoView').classList.remove('on'));
 
-async function deleteEntry(id) {
+async function toggleVisibility(id, e) {
+  const next = e.visibility === 'public' ? 'private' : 'public';
+  await db.ref(`users/${uid}/entries/${id}/visibility`).set(next);
+  if (next === 'public') await db.ref(`public/entries/${id}`).set({ ...e, visibility: 'public', uid });
+  else await db.ref(`public/entries/${id}`).remove();
+}
+
+async function deleteEntry(id, e) {
   if (!confirm('이 기록을 삭제할까요?')) return;
   await db.ref(`users/${uid}/entries/${id}`).remove();
+  if (e.visibility === 'public') await db.ref(`public/entries/${id}`).remove();
+}
+
+// ---------- 도시 지오코딩 (Nominatim, 로컬 캐시) ----------
+async function geocodeCity(code, city) {
+  const key = `geocity:${code}:${city.trim().toLowerCase()}`;
+  try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c) return c; } catch (e) { /* 무시 */ }
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ko&countrycodes=${code.toLowerCase()}&q=${encodeURIComponent(city)}`;
+  const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    const j = await res.json();
+    if (!j.length) return null;
+    const out = { lat: parseFloat(j[0].lat), lng: parseFloat(j[0].lon) };
+    localStorage.setItem(key, JSON.stringify(out));
+    return out;
+  } catch (e) { return null; } finally { clearTimeout(to); }
 }
 
 // ---------- 일기 추가 모달 ----------
-function fillCountrySelect() {
-  const sel = $('#fCountry'); sel.textContent = '';
+function fillCountrySelect(sel, withAll) {
+  sel.textContent = '';
+  if (withAll) { const o = document.createElement('option'); o.value = ''; o.textContent = '전체'; sel.appendChild(o); }
   COUNTRIES.forEach(([code, , ko]) => {
     const opt = document.createElement('option'); opt.value = code; opt.textContent = ko; sel.appendChild(opt);
   });
 }
-fillCountrySelect();
+fillCountrySelect($('#fCountry'), false);
+fillCountrySelect($('#exploreCountry'), true);
 
 $('#fab').addEventListener('click', () => {
   $('#entryMsg').textContent = '';
   $('#entryForm').reset();
   if (activeCountry) $('#fCountry').value = activeCountry;
+  if (activeCity) $('#fCity').value = activeCity;
   $('#fDate').value = new Date().toISOString().slice(0, 10);
   $('#entryModal').classList.add('on');
 });
@@ -424,99 +566,185 @@ $('#entryForm').addEventListener('submit', async (e) => {
   const code = $('#fCountry').value;
   const city = $('#fCity').value.trim();
   const date = $('#fDate').value;
+  const title = $('#fTitle').value.trim();
   const text = $('#fText').value.trim();
+  const visibility = document.querySelector('input[name="fVis"]:checked').value;
   const files = [...$('#fPhotos').files];
-  $('#entryMsg').style.color = 'var(--ink-2)';
-  $('#entryMsg').textContent = '';
+  const msg = $('#entryMsg');
+  msg.style.color = 'var(--ink-2)'; msg.textContent = '';
   $('#entrySubmit').disabled = true;
   try {
+    msg.textContent = '도시 위치 찾는 중…';
+    const geo = await geocodeCity(code, city);
     const id = db.ref(`users/${uid}/entries`).push().key;
     let photos = [];
     if (files.length) {
-      $('#entryMsg').textContent = `사진 올리는 중… (0/${files.length})`;
       for (let i = 0; i < files.length; i++) {
+        msg.textContent = `사진 올리는 중… (${i + 1}/${files.length})`;
         const path = `users/${uid}/entries/${id}/${Date.now()}_${i}_${files[i].name}`;
         const task = storage.ref(path);
         await task.put(files[i]);
-        const url = await task.getDownloadURL();
-        photos.push(url);
-        $('#entryMsg').textContent = `사진 올리는 중… (${i + 1}/${files.length})`;
+        photos.push(await task.getDownloadURL());
       }
     }
-    await db.ref(`users/${uid}/entries/${id}`).set({
-      countryCode: code,
-      countryKo: COUNTRY_BY_CODE[code] ? COUNTRY_BY_CODE[code][2] : code,
-      city, date, text, photos,
+    const entry = {
+      countryCode: code, city, date, title, text, photos, visibility,
+      lat: geo ? geo.lat : null, lng: geo ? geo.lng : null,
       createdAt: firebase.database.ServerValue.TIMESTAMP,
-    });
+    };
+    await db.ref(`users/${uid}/entries/${id}`).set(entry);
+    if (visibility === 'public') await db.ref(`public/entries/${id}`).set({ ...entry, uid });
     $('#entryModal').classList.remove('on');
-    activeCountry = code; renderCountryList(); renderEntryList();
+    activeCountry = code; activeCity = city; view = 'country';
+    flyToCountry(code, true);
   } catch (err) {
-    $('#entryMsg').style.color = 'var(--err)';
-    $('#entryMsg').textContent = `저장 실패: ${err.message || err}`;
+    msg.style.color = 'var(--err)';
+    msg.textContent = `저장 실패: ${err.message || err}`;
   } finally {
     $('#entrySubmit').disabled = false;
   }
 });
 
+// ---------- 둘러보기(공개 피드) ----------
+$('#exploreBtn').addEventListener('click', async () => {
+  $('#exploreModal').classList.add('on');
+  const list = $('#exploreList'); list.innerHTML = '<li class="muted">불러오는 중…</li>';
+  try {
+    const snap = await db.ref('public/entries').limitToLast(100).once('value');
+    window.__publicEntries = snap.val() || {};
+    renderExplore();
+  } catch (err) { list.innerHTML = '<li class="muted">불러오지 못했어요.</li>'; }
+});
+$('#exploreClose').addEventListener('click', () => $('#exploreModal').classList.remove('on'));
+$('#exploreCountry').addEventListener('change', renderExplore);
+function renderExplore() {
+  const filter = $('#exploreCountry').value;
+  const list = $('#exploreList'); list.textContent = '';
+  const empty = $('#exploreEmpty');
+  const rows = Object.entries(window.__publicEntries || {})
+    .filter(([, e]) => !filter || e.countryCode === filter)
+    .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+  empty.hidden = rows.length > 0;
+  rows.forEach(([id, e]) => {
+    const li = document.createElement('li'); li.className = 'explore-card';
+    const where = document.createElement('div'); where.className = 'where';
+    where.textContent = `${e.title || '(제목 없음)'} · ${e.city || ''}, ${koName(e.countryCode)}`;
+    const by = document.createElement('div'); by.className = 'by'; by.textContent = e.date || '';
+    li.append(where, by);
+    if (e.text) { const p = document.createElement('p'); p.className = 'text'; p.textContent = e.text; li.appendChild(p); }
+    if (e.photos && e.photos.length) {
+      const row = document.createElement('div'); row.className = 'photos';
+      e.photos.slice(0, 6).forEach((url) => {
+        const img = document.createElement('img'); img.src = url; img.alt = '여행 사진'; img.loading = 'lazy';
+        img.addEventListener('click', () => { $('#photoViewImg').src = url; $('#photoView').classList.add('on'); });
+        row.appendChild(img);
+      });
+      li.appendChild(row);
+    }
+    list.appendChild(li);
+  });
+}
+
 // ---------- 지구본 ----------
 let map = null;
 let geoReady = false;
+let featuresByIso = {};
+let cityMarkers = [];
 
 function initGlobe() {
   map = new maplibregl.Map({
     container: 'globeMap',
-    style: {
-      version: 8,
-      sources: {},
-      layers: [{ id: 'bg', type: 'background', paint: { 'background-color': getComputedStyle(document.documentElement).getPropertyValue('--sea').trim() } }],
-    },
-    center: [127, 20],
-    zoom: 1.1,
-    projection: 'globe',
-    attributionControl: false,
+    style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': cssVar('--sea') } }] },
+    center: [127, 20], zoom: 1.1, projection: 'globe', attributionControl: false,
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'top-right');
   map.on('load', async () => {
     try {
       const topo = await (await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')).json();
       const geo = topojson.feature(topo, topo.objects.countries);
+      geo.features.forEach((f) => { featuresByIso[String(f.id)] = f; });
       map.addSource('countries', { type: 'geojson', data: geo });
-      map.addLayer({
-        id: 'countries-fill', type: 'fill', source: 'countries',
-        paint: { 'fill-color': getComputedStyle(document.documentElement).getPropertyValue('--land').trim(), 'fill-opacity': 1 },
-      });
-      map.addLayer({
-        id: 'countries-line', type: 'line', source: 'countries',
-        paint: { 'line-color': getComputedStyle(document.documentElement).getPropertyValue('--ink-2').trim(), 'line-width': 0.5 },
-      });
+      map.addLayer({ id: 'countries-fill', type: 'fill', source: 'countries', paint: { 'fill-color': cssVar('--land'), 'fill-opacity': 1 } });
+      map.addLayer({ id: 'countries-line', type: 'line', source: 'countries', paint: { 'line-color': cssVar('--ink-2'), 'line-width': 0.5 } });
       geoReady = true;
       renderGlobeColors();
       map.on('click', 'countries-fill', (e) => {
-        const id = e.features[0].id;
-        const code = ISO_TO_ALPHA2[String(id)];
-        if (code && COUNTRY_BY_CODE[code]) selectCountry(code);
+        const code = ISO_TO_ALPHA2[String(e.features[0].id)];
+        if (code) flyToCountry(code);
       });
       map.on('mouseenter', 'countries-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
       map.on('mouseleave', 'countries-fill', () => { map.getCanvas().style.cursor = ''; });
     } catch (err) { console.warn('지구본 폴리곤 로딩 실패', err); }
   });
 }
-const ISO_TO_ALPHA2 = Object.fromEntries(COUNTRIES.map((c) => [c[1].replace(/^0+/, '') || '0', c[0]]));
 
 function renderGlobeColors() {
   if (!map || !geoReady) return;
-  const codes = [...visitedCodes()];
-  const isoNums = codes.map((c) => Number(COUNTRY_BY_CODE[c] ? COUNTRY_BY_CODE[c][1] : -1)).filter((n) => n >= 0);
-  const landColor = getComputedStyle(document.documentElement).getPropertyValue('--land').trim();
-  const visitedColor = getComputedStyle(document.documentElement).getPropertyValue('--visited').trim();
-  if (!isoNums.length) {
-    map.setPaintProperty('countries-fill', 'fill-color', landColor);
-    return;
-  }
-  map.setPaintProperty('countries-fill', 'fill-color', [
-    'case', ['in', ['to-number', ['id']], ['literal', isoNums]], visitedColor, landColor,
-  ]);
+  const counts = countryCounts();
+  const landColor = cssVar('--land');
+  const pairs = [];
+  Object.keys(counts).forEach((code) => {
+    const c = COUNTRY_BY_CODE[code];
+    if (!c) return;
+    pairs.push(Number(c[1]), hexToRgba(cssVar('--visited'), levelAlpha(counts[code])));
+  });
+  if (!pairs.length) { map.setPaintProperty('countries-fill', 'fill-color', landColor); return; }
+  map.setPaintProperty('countries-fill', 'fill-color', ['match', ['to-number', ['id']], ...pairs, landColor]);
+}
+
+function featureBounds(feature) {
+  let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+  const walk = (coords) => {
+    if (typeof coords[0] === 'number') {
+      const [lng, lat] = coords;
+      if (lng < minLng) minLng = lng; if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat; if (lat > maxLat) maxLat = lat;
+    } else coords.forEach(walk);
+  };
+  walk(feature.geometry.coordinates);
+  return [minLng, minLat, maxLng, maxLat];
+}
+
+function flyToCountry(code, keepCity) {
+  view = 'country'; activeCountry = code;
+  if (!keepCity) activeCity = null;
+  $('#panelGlobe').classList.add('hide');
+  $('#panelCountry').classList.add('show');
+  $('#backBtn').classList.add('show');
+  $('#countryLabel').classList.add('show');
+  $('#countryLabel').textContent = koName(code);
+  const c = COUNTRY_BY_CODE[code];
+  const feat = c && featuresByIso[String(Number(c[1]))];
+  if (feat) { const b = featureBounds(feat); map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 60, duration: 800, maxZoom: 7 }); }
+  renderCityList(); renderEntryList(); renderCityMarkers();
+}
+$('#backBtn').addEventListener('click', backToGlobe);
+function backToGlobe() {
+  view = 'globe'; activeCountry = null; activeCity = null;
+  $('#panelGlobe').classList.remove('hide');
+  $('#panelCountry').classList.remove('show');
+  $('#backBtn').classList.remove('show');
+  $('#countryLabel').classList.remove('show');
+  clearCityMarkers();
+  map.flyTo({ center: [127, 20], zoom: 1.1, duration: 800 });
+  renderCountryList(); renderGlobeColors();
+}
+
+function clearCityMarkers() { cityMarkers.forEach((m) => m.remove()); cityMarkers = []; }
+function renderCityMarkers() {
+  clearCityMarkers();
+  if (view !== 'country' || !activeCountry) return;
+  const counts = cityCounts(activeCountry);
+  Object.entries(counts).forEach(([city, info]) => {
+    if (info.lat == null || info.lng == null) return;
+    const el = document.createElement('div'); el.className = 'city-dot';
+    if (city === activeCity) el.classList.add('active');
+    el.style.background = hexToRgba(cssVar('--visited'), Math.max(levelAlpha(info.count), 0.6));
+    el.title = `${city} ×${info.count}`;
+    el.addEventListener('click', () => selectCity(city));
+    const marker = new maplibregl.Marker({ element: el }).setLngLat([info.lng, info.lat]).addTo(map);
+    cityMarkers.push(marker);
+  });
 }
 
 initGlobe();
