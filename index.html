@@ -406,6 +406,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .btn { cursor: pointer; border: 1px solid var(--line); background: transparent; border-radius: 10px; padding: 8px 14px; font-weight: 600; }
 .btn.primary { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 #msgs p { margin: 4px 0; font-size: 12.5px; }
+#liveStatus { margin: 4px 0; font-size: 12.5px; color: var(--ok); }
 #msgs .err { color: var(--err); }
 #msgs .warn { color: var(--warn); }
 #msgs .ok { color: var(--ok); }
@@ -517,8 +518,10 @@ details code { background: var(--field); padding: 1px 5px; border-radius: 4px; f
     <div class="btnrow">
       <button id="applyBtn" class="btn primary" type="button">적용하고 재생</button>
       <button id="shareBtn" class="btn" type="button" title="지금 계획을 링크로 만들어 복사해요">🔗 공유 링크 만들기</button>
+      <button id="liveBtn" class="btn" type="button" title="링크를 받은 사람과 실시간으로 함께 수정해요">👥 실시간 공동편집 시작</button>
       <button id="resetBtn" class="btn" type="button">계획 초기화</button>
     </div>
+    <p id="liveStatus" hidden></p>
     <div id="msgs" aria-live="polite"></div>
 
     <details>
@@ -572,6 +575,21 @@ details code { background: var(--field); padding: 1px 5px; border-radius: 4px; f
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script>
+try {
+  firebase.initializeApp({
+    apiKey: "AIzaSyANQqsO1CX8X-HjDDfObnY7ErHzQp4Gk4k",
+    authDomain: "travelerplan-8696b.firebaseapp.com",
+    databaseURL: "https://travelerplan-8696b-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "travelerplan-8696b",
+    storageBucket: "travelerplan-8696b.firebasestorage.app",
+    messagingSenderId: "947956439036",
+    appId: "1:947956439036:web:23644e74b41a8a537b0479"
+  });
+} catch (e) { /* 파이어베이스 로딩 실패: 실시간 공유 기능만 비활성화됨 */ }
+</script>
 <script>
 const DEFAULT_PLAN = "# 형식\n#   1일차 메모\n#   시간 장소 / 메모                       → 장소 이벤트\n#   시작~도착 출발 > 도착 : 교통수단 / 메모   → 이동 이벤트\n# 사전에 없는 장소는 자동 검색해요. 안 되면 이름@주소 로 적어 주세요.\n# 시간은 예시예요. 원하는 대로 고쳐 보세요.\n# 한 일차를 다 쓰고 빈 줄에서 엔터를 한 번 더 누르면 다음 일차가 자동으로 이어져요.\n\n1일차 맨체스터, 올드 트래포드\n10:00 맨체스터 피카딜리역 / 큰 짐 맡기기\n10:15~10:45 피카딜리역 > 올드 트래포드 : 트램\n11:00 올드 트래포드 / 스타디움 투어\n\n2일차 리버풀, 안필드 경기\n09:00~09:30 올드 트래포드 > 리버풀 라임스트리트역 : 기차\n14:00~14:30 라임스트리트역 > 안필드 : 버스\n15:00 안필드 / 리버풀 vs 크리스탈 팰리스\n";
 const TripLogic = (function () {
@@ -2467,6 +2485,84 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
     else window.prompt('아래 링크를 복사해서 보내세요:', url);
   });
 
+  // ---------- 실시간 공동편집 ----------
+  // 같은 방(roomId)에 들어온 사람끼리 planText를 실시간으로 동기화한다.
+  // 충돌 처리는 "마지막에 저장한 내용이 이긴다" 방식(완전한 글자 단위 병합은 하지 않음).
+  let roomId = null;
+  let roomRef = null;
+  let lastSyncedText = null; // 가장 최근에 우리가 보내거나 받은 텍스트(에코 방지용)
+  let pushTimer = null;
+  const liveBtn = $('#liveBtn');
+  const liveStatus = $('#liveStatus');
+
+  function roomUrl(id) { return `${location.origin}${location.pathname}?room=${id}`; }
+  function genRoomId() { return Math.random().toString(36).slice(2, 10); }
+
+  function setLiveStatus(text) {
+    if (!text) { liveStatus.hidden = true; liveStatus.textContent = ''; return; }
+    liveStatus.hidden = false; liveStatus.textContent = text;
+  }
+
+  function applyRemoteText(text) {
+    lastSyncedText = text;
+    const ta = $('#planText');
+    if (document.activeElement === ta) return; // 입력 중이면 방해하지 않음(블러될 때 다시 확인)
+    if (ta.value === text) return;
+    ta.value = text;
+    shareLoadedNote = false;
+    applyPlan(text);
+  }
+
+  function attachRoom(id) {
+    if (roomRef) roomRef.off();
+    roomId = id;
+    roomRef = firebase.database().ref(`rooms/${id}/planText`);
+    roomRef.on('value', (snap) => {
+      const text = snap.val();
+      if (typeof text === 'string' && text.trim()) applyRemoteText(text);
+    });
+    liveBtn.textContent = '🔗 공유 링크 다시 복사';
+    liveBtn.title = '지금 함께 편집 중인 링크를 다시 복사해요';
+    setLiveStatus('🟢 실시간 공유 중 · 이 링크를 받은 사람과 바로 함께 편집돼요.');
+  }
+
+  function pushPlanText(text) {
+    if (!roomId || !roomRef) return;
+    if (text === lastSyncedText) return;
+    lastSyncedText = text;
+    roomRef.set(text).catch(() => { /* 네트워크 오류는 다음 입력 때 재시도됨 */ });
+  }
+
+  function schedulePush() {
+    if (!roomId) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(() => pushPlanText($('#planText').value), 600);
+  }
+  $('#planText').addEventListener('input', schedulePush);
+  $('#planText').addEventListener('blur', () => {
+    clearTimeout(pushTimer);
+    pushPlanText($('#planText').value);
+    if (roomId && lastSyncedText != null) applyRemoteText(lastSyncedText);
+  });
+
+  liveBtn.addEventListener('click', async () => {
+    if (!window.firebase || !firebase.apps || !firebase.apps.length) {
+      flashMsg('err', '실시간 공유 기능을 불러오지 못했어요(인터넷 연결을 확인해 주세요).');
+      return;
+    }
+    const text = $('#planText').value;
+    if (!text.trim()) { flashMsg('warn', '공유할 계획이 없어요. 먼저 계획을 적어 주세요.'); return; }
+    if (!roomId) {
+      attachRoom(genRoomId());
+      lastSyncedText = text;
+      roomRef.set(text).catch(() => {});
+      history.replaceState(null, '', `?room=${roomId}`);
+    }
+    const ok = await copyText(roomUrl(roomId));
+    if (ok) flashMsg('ok', '실시간 공동편집 링크를 복사했어요! 이 링크를 받은 사람은 같이 실시간으로 수정할 수 있어요.');
+    else window.prompt('아래 링크를 복사해서 보내세요(함께 실시간 편집됨):', roomUrl(roomId));
+  });
+
   // ---------- 장소 검색 (계획에 있는 장소를 검색해서 그 방문 시점으로 이동) ----------
   const searchBtn = $('#searchBtn'), searchPanel = $('#searchPanel'), searchInput = $('#searchInput'), searchResults = $('#searchResults');
   function stopWhenText(st) {
@@ -3465,6 +3561,11 @@ if (typeof module !== 'undefined') module.exports = TripLogic;
   if (sharedText) { shareLoadedNote = true; history.replaceState(null, '', location.pathname); }
   if (!applyPlan(startText)) { $('#planText').value = DEFAULT_PLAN; applyPlan(DEFAULT_PLAN); }
   if (sharedText) openSheet();
+  const roomParam = new URLSearchParams(location.search).get('room');
+  if (roomParam && window.firebase && firebase.apps && firebase.apps.length) {
+    attachRoom(roomParam);
+    openSheet();
+  }
   requestAnimationFrame(frame);
   window.__trip = { ctl, cam, map, roadStat, go, applyPlan, dims: () => ({ W, H, DPR }), events: () => events, cityMap: () => cv.map };
 })();
